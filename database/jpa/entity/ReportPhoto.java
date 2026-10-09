@@ -1,0 +1,129 @@
+package com.buildup.report.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Getter
+@Entity
+@Table(
+        name = "report_photos",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_report_photos_report_position",
+                columnNames = {"report_id", "position"}
+        )
+)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class ReportPhoto {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "report_id", nullable = false)
+    private Report report;
+
+    @Column(nullable = false)
+    private int position;
+
+    @Column(name = "file_name", nullable = false, length = 255)
+    private String fileName;
+
+    @Column(name = "s3_key", unique = true, length = 500)
+    private String s3Key;
+
+    @Column(name = "original_name", length = 255)
+    private String originalName;
+
+    @Column(name = "content_type", length = 100)
+    private String contentType;
+
+    @Column(name = "size_bytes")
+    private Long sizeBytes;
+
+    @Column(name = "taken_at")
+    private LocalDateTime takenAt;
+
+    @Column(precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(precision = 10, scale = 7)
+    private BigDecimal longitude;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    private ReportPhoto(
+            String fileName,
+            String s3Key,
+            String originalName,
+            String contentType,
+            Long sizeBytes,
+            LocalDateTime takenAt,
+            BigDecimal latitude,
+            BigDecimal longitude
+    ) {
+        this.fileName = fileName;
+        this.s3Key = s3Key;
+        this.originalName = originalName;
+        this.contentType = contentType;
+        this.sizeBytes = sizeBytes;
+        this.takenAt = takenAt;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public static ReportPhoto legacy(String fileName) {
+        return new ReportPhoto(fileName, null, fileName, null, null, null, null, null);
+    }
+
+    public static ReportPhoto uploaded(
+            String s3Key,
+            String originalName,
+            String contentType,
+            Long sizeBytes,
+            LocalDateTime takenAt,
+            BigDecimal latitude,
+            BigDecimal longitude
+    ) {
+        return new ReportPhoto(
+                originalName,
+                s3Key,
+                originalName,
+                contentType,
+                sizeBytes,
+                takenAt,
+                latitude,
+                longitude
+        );
+    }
+
+    public void attachTo(Report report, int position) {
+        this.report = report;
+        this.position = position;
+    }
+
+    public void moveTo(int position) {
+        this.position = position;
+    }
+
+    public boolean isStoredInS3() {
+        return s3Key != null && !s3Key.isBlank();
+    }
+}
