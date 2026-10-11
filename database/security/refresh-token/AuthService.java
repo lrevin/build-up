@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 @Service
@@ -49,7 +48,6 @@ public class AuthService {
             );
         }
 
-        validatePasswordBytes(request.password());
         String passwordHash = passwordService.hash(request.password());
         User user = userRepository.save(User.register(
                 request.name().trim(),
@@ -113,16 +111,6 @@ public class AuthService {
             return null;
         }
         return value.trim();
-    }
-
-    private void validatePasswordBytes(String password) {
-        if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new AuthException(
-                    HttpStatus.BAD_REQUEST,
-                    "INVALID_PASSWORD",
-                    "Password must not exceed 72 UTF-8 bytes"
-            );
-        }
     }
 
     private AuthException invalidCredentials() {
