@@ -20,6 +20,7 @@ import { useDialog } from '../components/Dialog';
 import PhotoViewer from '../components/PhotoViewer';
 import { AppHeader, Avatar, Card, IconButton } from '../components/ui';
 import { WEATHER_META } from '../components/WorkLog';
+import { WorkTagList } from '../components/WorkTags';
 import { ReviewCard } from '../components/Review';
 import { fileSize } from './ReportScreen';
 
@@ -95,9 +96,14 @@ export default function ReportDetailScreen({
   const onDelete = async () => {
     const ok = await dialog.confirm({
       title: '이 보고를 삭제할까요?',
-      message: `${report.processName} 진행률이 ${pct(report.to)} → ${pct(
-        report.from,
-      )}로 되돌아가요.`,
+      message:
+        report.processTo != null
+          ? `${report.processName} 진행률이 ${pct(report.processTo)} → ${pct(
+              report.processFrom ?? 0,
+            )}로, 현장 전체 진행률도 ${pct(report.from)}로 되돌아가요.`
+          : `현장 전체 진행률이 ${pct(report.to)} → ${pct(
+              report.from,
+            )}로 되돌아가요.`,
       confirmText: '삭제',
       danger: true,
     });
@@ -160,9 +166,26 @@ export default function ReportDetailScreen({
           <View style={styles.divider} />
 
           <Text style={styles.label}>진행한 작업</Text>
-          <Text style={styles.work}>{report.work || report.processName}</Text>
+          <View style={styles.workTags}>
+            <WorkTagList work={report.work || report.processName} />
+          </View>
 
-          <Text style={[styles.label, styles.labelGap]}>현장 전체 진행률</Text>
+          {report.processTo != null ? (
+            <>
+              <Text style={[styles.label, styles.labelGap]}>
+                {report.processName} 진행률
+              </Text>
+              <View style={styles.progressRow}>
+                <Text style={styles.from}>{pct(report.processFrom ?? 0)}</Text>
+                <Text style={styles.arrow}>→</Text>
+                <Text style={styles.to}>{pct(report.processTo)}</Text>
+              </View>
+            </>
+          ) : null}
+
+          <Text style={[styles.label, styles.labelGap]}>
+            현장 전체 진행률{report.processTo != null ? ' (자동 계산)' : ''}
+          </Text>
           <View style={styles.progressRow}>
             <Text style={styles.from}>{pct(report.from)}</Text>
             <Text style={styles.arrow}>→</Text>
@@ -177,21 +200,19 @@ export default function ReportDetailScreen({
 
         <Card style={styles.gap}>
           <Text style={styles.cardTitle}>작업 정보</Text>
-          <InfoRow
-            label="날씨"
-            value={
-              report.workLog.weather
-                ? WEATHER_META[report.workLog.weather].label
-                : null
-            }
-          />
-          <InfoRow
-            label="투입 인원"
-            value={
-              report.workLog.workers ? `${report.workLog.workers}명` : null
-            }
-          />
-          <InfoRow label="장비" value={report.workLog.equipment || null} />
+          {/* 날씨·인원·장비는 예전 보고에만 있다(지금은 받지 않음) */}
+          {report.workLog.weather ? (
+            <InfoRow
+              label="날씨"
+              value={WEATHER_META[report.workLog.weather].label}
+            />
+          ) : null}
+          {report.workLog.workers ? (
+            <InfoRow label="투입 인원" value={`${report.workLog.workers}명`} />
+          ) : null}
+          {report.workLog.equipment ? (
+            <InfoRow label="장비" value={report.workLog.equipment} />
+          ) : null}
           <Pressable
             disabled={!report.location}
             onPress={() =>
@@ -376,13 +397,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.divider, marginVertical: 18 },
   label: { fontSize: 13, color: colors.textSub },
   labelGap: { marginTop: 18 },
-  work: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    lineHeight: 26,
-    marginTop: 4,
-  },
+  workTags: { marginTop: 8 },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'baseline',

@@ -8,7 +8,7 @@ const store = createAsyncStorage('buildup');
 const KEYS = {
   server: 'server-config', // { useDummy, baseUrl }
   session: 'session', // { userId, token }
-  dummyDb: 'dummy-db-v8', // 데이터 모양이 바뀌면 버전을 올려 예전 저장본을 무시
+  dummyDb: 'dummy-db-v10', // 데이터 모양이 바뀌면 버전을 올려 예전 저장본을 무시
   draft: (userId: string, siteId: string) => `draft:${userId}:${siteId}-v2`,
   seen: (userId: string) => `seen-reports:${userId}`, // { 현장 id: 마지막으로 본 시각 }
 };
@@ -41,7 +41,8 @@ export const serverConfigStore = {
 
 export interface SavedSession {
   userId: string;
-  token: string | null;
+  token: string | null; // 접근 토큰
+  refreshToken?: string | null; // 리프레시 토큰(접근 토큰이 만료되면 새로 받을 때)
   user?: User; // 서버에 연결되지 않을 때 이 정보로 시작
 }
 
@@ -70,7 +71,9 @@ export const dummyStore = {
 // ---- 보고 작성 임시저장 ----
 
 export interface ReportDraft {
-  work: string; // 진행한 작업
+  work: string; // 진행한 작업(태그를 ', '로 이어 붙임)
+  workText?: string; // 아직 태그가 안 된 입력 중인 작업
+  processKey?: string | null; // 자동 계산 현장: 고른 공정
   value: number; // 입력 중인 현장 전체 진행률
   memo: string;
   photoUris: string[];
