@@ -2,6 +2,7 @@ package com.buildup.material.entity;
 
 import com.buildup.user.entity.User;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -17,14 +18,15 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MaterialRequestEvent {
 
+    @Convert(converter = MaterialRequestStatusAttributeConverter.class)
     @Column(nullable = false, length = 30)
-    private String status;
+    private MaterialRequestStatus status;
 
     @Column(nullable = false, length = 100)
     private String actor;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "actor_user_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "actor_user_id", nullable = false)
     private User actorUser;
 
     @Column(name = "by_hq", nullable = false)
@@ -39,7 +41,7 @@ public class MaterialRequestEvent {
             boolean byHq,
             LocalDateTime at
     ) {
-        this.status = status.name();
+        this.status = status;
         this.actor = actorUser.getName();
         this.actorUser = actorUser;
         this.byHq = byHq;

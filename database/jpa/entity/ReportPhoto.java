@@ -41,13 +41,10 @@ public class ReportPhoto {
     @Column(nullable = false)
     private int position;
 
-    @Column(name = "file_name", nullable = false, length = 255)
-    private String fileName;
-
     @Column(name = "s3_key", unique = true, length = 500)
     private String s3Key;
 
-    @Column(name = "original_name", length = 255)
+    @Column(name = "original_name", nullable = false, length = 255)
     private String originalName;
 
     @Column(name = "content_type", length = 100)
@@ -70,7 +67,6 @@ public class ReportPhoto {
     private LocalDateTime createdAt;
 
     private ReportPhoto(
-            String fileName,
             String s3Key,
             String originalName,
             String contentType,
@@ -79,7 +75,6 @@ public class ReportPhoto {
             BigDecimal latitude,
             BigDecimal longitude
     ) {
-        this.fileName = fileName;
         this.s3Key = s3Key;
         this.originalName = originalName;
         this.contentType = contentType;
@@ -90,7 +85,7 @@ public class ReportPhoto {
     }
 
     public static ReportPhoto legacy(String fileName) {
-        return new ReportPhoto(fileName, null, fileName, null, null, null, null, null);
+        return new ReportPhoto(null, fileName, null, null, null, null, null);
     }
 
     public static ReportPhoto uploaded(
@@ -103,7 +98,6 @@ public class ReportPhoto {
             BigDecimal longitude
     ) {
         return new ReportPhoto(
-                originalName,
                 s3Key,
                 originalName,
                 contentType,
@@ -116,10 +110,6 @@ public class ReportPhoto {
 
     public void attachTo(Report report, int position) {
         this.report = report;
-        this.position = position;
-    }
-
-    public void moveTo(int position) {
         this.position = position;
     }
 
