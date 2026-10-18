@@ -39,6 +39,9 @@ public class DeviceToken {
     private LocalDateTime updatedAt;
 
     private DeviceToken(String token, User user) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Device token must not be blank");
+        }
         this.token = token;
         this.user = user;
     }
@@ -47,7 +50,8 @@ public class DeviceToken {
         return new DeviceToken(token, user);
     }
 
-    public void assignTo(User user) {
+    public void assignTo(User user, LocalDateTime registeredAt) {
         this.user = user;
+        this.updatedAt = registeredAt;
     }
 }

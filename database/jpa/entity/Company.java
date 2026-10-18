@@ -32,4 +32,13 @@ public class Company {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    private Company(String name, String code) {
+        this.name = name;
+        this.code = code;
+    }
+
+    public static Company create(String name, String code) {
+        return new Company(name, code);
+    }
 }

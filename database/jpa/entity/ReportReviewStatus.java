@@ -1,20 +1,25 @@
 package com.buildup.report.entity;
 
-/**
- * 보고 검토 상태. DB에는 대문자(PENDING / APPROVED / REVISION), API(JSON)에는 소문자(pending / approved / revision).
- * 보완 요청 = REVISION (예전 이름 REJECTED는 V10에서 바꿈)
- */
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Locale;
+
 public enum ReportReviewStatus {
     PENDING,
     APPROVED,
     REVISION;
 
-    /** API로 주고받는 값: pending | approved | revision */
+    @JsonValue
     public String apiValue() {
-        return name().toLowerCase();
+        return name().toLowerCase(Locale.ROOT);
     }
 
-    public static ReportReviewStatus fromApi(String value) {
-        return valueOf(value.trim().toUpperCase());
+    @JsonCreator
+    public static ReportReviewStatus fromApiValue(String value) {
+        if (value == null) {
+            return null;
+        }
+        return valueOf(value.trim().toUpperCase(Locale.ROOT));
     }
 }

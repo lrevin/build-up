@@ -14,9 +14,21 @@ import java.util.Optional;
 
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
+    boolean existsBySiteId(Long siteId);
+
     boolean existsBySiteIdAndProcessKeyAndReviewStatus(
             Long siteId,
             String processKey,
+            com.buildup.report.entity.ReportReviewStatus reviewStatus
+    );
+
+    boolean existsBySiteIdAndProcessKeyIsNullAndReviewStatus(
+            Long siteId,
+            com.buildup.report.entity.ReportReviewStatus reviewStatus
+    );
+
+    Optional<Report> findFirstBySiteIdAndProcessKeyIsNullAndReviewStatusOrderByCreatedAtDescIdDesc(
+            Long siteId,
             com.buildup.report.entity.ReportReviewStatus reviewStatus
     );
 
@@ -48,4 +60,9 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     @EntityGraph(attributePaths = {"site", "site.owner", "site.company", "author"})
     @Query("select report from Report report where report.id = :reportId")
     Optional<Report> findForPhotoUpdate(@Param("reportId") Long reportId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"site", "site.owner", "site.company", "author"})
+    @Query("select report from Report report where report.id = :reportId")
+    Optional<Report> findForFileUpdate(@Param("reportId") Long reportId);
 }

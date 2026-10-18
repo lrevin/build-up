@@ -2,6 +2,7 @@ package com.buildup.site.repository;
 
 import com.buildup.site.entity.MembershipStatus;
 import com.buildup.site.entity.SiteMember;
+import com.buildup.site.entity.SiteMemberRole;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -35,6 +36,12 @@ public interface SiteMemberRepository extends JpaRepository<SiteMember, Long> {
     );
 
     Optional<SiteMember> findBySiteIdAndUserId(Long siteId, Long userId);
+
+    @EntityGraph(attributePaths = {"user"})
+    List<SiteMember> findAllBySiteIdAndMemberRole(
+            Long siteId,
+            SiteMemberRole memberRole
+    );
 
     @EntityGraph(attributePaths = {"user"})
     List<SiteMember> findAllBySiteIdAndStatusOrderByJoinedAtAscIdAsc(

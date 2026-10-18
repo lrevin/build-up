@@ -1,7 +1,5 @@
 package com.buildup.auth.service;
 
-import com.buildup.common.exception.AuthException;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,11 +19,7 @@ public class PasswordService {
             throw new IllegalArgumentException("Password must not be blank");
         }
         if (rawPassword.getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new AuthException(
-                    HttpStatus.BAD_REQUEST,
-                    "INVALID_PASSWORD",
-                    "Password must not exceed 72 UTF-8 bytes"
-            );
+            throw new IllegalArgumentException("Password must not exceed 72 UTF-8 bytes");
         }
 
         return passwordEncoder.encode(rawPassword);
@@ -34,6 +28,9 @@ public class PasswordService {
     public boolean matches(String rawPassword, String passwordHash) {
         if (rawPassword == null || rawPassword.isBlank()
                 || passwordHash == null || passwordHash.isBlank()) {
+            return false;
+        }
+        if (rawPassword.getBytes(StandardCharsets.UTF_8).length > 72) {
             return false;
         }
 

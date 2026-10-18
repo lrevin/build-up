@@ -22,7 +22,7 @@ public class JwtTokenService {
         this.properties = properties;
     }
 
-    public AccessToken issueAccessToken(User user) {
+    public AccessToken issueAccessToken(User user, String apiRole) {
         Instant issuedAt = Instant.now();
         Instant expiresAt = issuedAt.plus(properties.accessTokenTtl());
 
@@ -35,7 +35,7 @@ public class JwtTokenService {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .id(UUID.randomUUID().toString())
-                .claim("role", user.getRole())
+                .claim("role", apiRole)
                 .build();
 
         String value = jwtEncoder
