@@ -64,8 +64,8 @@ public class ReportReviewEvent {
         return new ReportReviewEvent(report, reviewer, ReportReviewStatus.APPROVED, comment);
     }
 
-    public static ReportReviewEvent rejected(Report report, User reviewer, String comment) {
-        return new ReportReviewEvent(report, reviewer, ReportReviewStatus.REJECTED, comment);
+    public static ReportReviewEvent revisionRequested(Report report, User reviewer, String comment) {
+        return new ReportReviewEvent(report, reviewer, ReportReviewStatus.REVISION, comment);
     }
 
     private static String normalizeComment(String value) {

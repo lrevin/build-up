@@ -163,8 +163,9 @@ public class Report {
         reviewStatus = ReportReviewStatus.APPROVED;
     }
 
-    public void reject() {
-        reviewStatus = ReportReviewStatus.REJECTED;
+    /** 보완 요청 */
+    public void requestRevision() {
+        reviewStatus = ReportReviewStatus.REVISION;
     }
 
     public boolean isPendingReview() {

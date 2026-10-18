@@ -199,7 +199,7 @@ Access Token 재발급에 사용하는 Refresh Token의 서버 저장 정보를 
 | `submit_longitude` | 보고 제출 위치 경도 |
 | `submit_accuracy` | 제출 위치 정확도 |
 | `author_id` | 작성 사용자 FK |
-| `review_status` | 검토 상태 |
+| `review_status` | 검토 상태: `PENDING`(검토 대기) / `APPROVED`(승인) / `REVISION`(보완 요청). API에서는 소문자 |
 | `created_at` | 생성 시각 |
 | `updated_at` | 수정 시각 |
 
