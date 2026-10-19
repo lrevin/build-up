@@ -100,15 +100,20 @@ POST /api/auth/refresh
 ### 로그아웃
 ```http
 POST /api/auth/logout
-Authorization: Bearer {accessToken}
+Authorization: Bearer {accessToken}   (없어도 됨)
 { "refreshToken": "q8Zt..." }
 ```
-- 접근 토큰과 리프레시 토큰이 모두 바로 무효가 됩니다.
+- **리프레시 토큰**은 바로 폐기됩니다. 이후 이 토큰으로 `/api/auth/refresh`를 부르면 `401`입니다.
+- **접근 토큰**은 일부러 바로 폐기하지 않습니다(DB 설계 의도).
+  - 서버가 로그인 상태를 저장하지 않는 JWT 방식이라, 접근 토큰은 만료 시각(기본 60분)이 지나야 스스로 무효가 됩니다.
+  - 그래서 유효 시간을 짧게 두고, 로그아웃 뒤에는 리프레시 토큰이 막혀 새 접근 토큰을 받을 수 없게 합니다.
+- **클라이언트(앱·웹)는 로그아웃할 때 저장해 둔 접근 토큰과 리프레시 토큰을 모두 지웁니다.**
+- `refreshToken`만 있으면 로그아웃할 수 있습니다. `Authorization` 헤더는 없어도 됩니다.
 
 ### 내 정보
 ```http
 GET /api/auth/me
-Authorization: Bearer {accessToken}
+Authorization: Bearer {accessToken}   (없어도 됨)
 ```
 - 응답은 위 2번의 `user`입니다.
 
