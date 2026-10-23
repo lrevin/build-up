@@ -97,4 +97,17 @@ public class ReportFile {
     public boolean isStoredInS3() {
         return s3Key != null && !s3Key.isBlank();
     }
+
+    public void replaceStoredObject(
+            String s3Key,
+            String originalName,
+            String contentType,
+            Long sizeBytes
+    ) {
+        this.legacyPath = null;
+        this.s3Key = s3Key;
+        this.originalName = originalName;
+        this.contentType = contentType;
+        this.sizeBytes = sizeBytes;
+    }
 }

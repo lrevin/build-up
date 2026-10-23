@@ -116,4 +116,22 @@ public class ReportPhoto {
     public boolean isStoredInS3() {
         return s3Key != null && !s3Key.isBlank();
     }
+
+    public void replaceStoredObject(
+            String s3Key,
+            String originalName,
+            String contentType,
+            Long sizeBytes,
+            LocalDateTime takenAt,
+            BigDecimal latitude,
+            BigDecimal longitude
+    ) {
+        this.s3Key = s3Key;
+        this.originalName = originalName;
+        this.contentType = contentType;
+        this.sizeBytes = sizeBytes;
+        this.takenAt = takenAt;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
 }
