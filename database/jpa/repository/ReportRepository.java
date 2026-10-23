@@ -7,9 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface ReportRepository extends JpaRepository<Report, Long> {
@@ -39,12 +40,48 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
             where report.site.id = :siteId
               and (:processKey is null or report.processKey = :processKey)
               and (:reviewStatus is null or report.reviewStatus = :reviewStatus)
+            order by report.createdAt desc, report.id desc
             """)
-    Page<Report> search(
+    List<Report> searchAll(
+            @Param("siteId") Long siteId,
+            @Param("processKey") String processKey,
+            @Param("reviewStatus") com.buildup.report.entity.ReportReviewStatus reviewStatus
+    );
+
+    @EntityGraph(attributePaths = {"author"})
+    @Query("""
+            select report
+            from Report report
+            where report.site.id = :siteId
+              and (:processKey is null or report.processKey = :processKey)
+              and (:reviewStatus is null or report.reviewStatus = :reviewStatus)
+              and (
+                    :cursorCreatedAt is null
+                    or report.createdAt < :cursorCreatedAt
+                    or (report.createdAt = :cursorCreatedAt and report.id < :cursorId)
+              )
+            order by report.createdAt desc, report.id desc
+            """)
+    List<Report> searchAfter(
             @Param("siteId") Long siteId,
             @Param("processKey") String processKey,
             @Param("reviewStatus") com.buildup.report.entity.ReportReviewStatus reviewStatus,
+            @Param("cursorCreatedAt") LocalDateTime cursorCreatedAt,
+            @Param("cursorId") Long cursorId,
             Pageable pageable
+    );
+
+    @Query("""
+            select count(report)
+            from Report report
+            where report.site.id = :siteId
+              and (:processKey is null or report.processKey = :processKey)
+              and (:reviewStatus is null or report.reviewStatus = :reviewStatus)
+            """)
+    long countSearch(
+            @Param("siteId") Long siteId,
+            @Param("processKey") String processKey,
+            @Param("reviewStatus") com.buildup.report.entity.ReportReviewStatus reviewStatus
     );
 
     @EntityGraph(attributePaths = {"site", "site.owner", "site.company", "author"})
@@ -65,4 +102,9 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     @EntityGraph(attributePaths = {"site", "site.owner", "site.company", "author"})
     @Query("select report from Report report where report.id = :reportId")
     Optional<Report> findForFileUpdate(@Param("reportId") Long reportId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"site", "site.owner", "site.company", "author"})
+    @Query("select report from Report report where report.id = :reportId")
+    Optional<Report> findForUpdate(@Param("reportId") Long reportId);
 }

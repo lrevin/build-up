@@ -187,6 +187,18 @@ public class Report {
         reviewStatus = ReportReviewStatus.REVISION;
     }
 
+    public void updateMemo(String memo) {
+        this.memo = memo;
+        if (reviewStatus == ReportReviewStatus.REVISION) {
+            reviewStatus = ReportReviewStatus.PENDING;
+        }
+    }
+
+    public boolean isEditable() {
+        return reviewStatus == ReportReviewStatus.PENDING
+                || reviewStatus == ReportReviewStatus.REVISION;
+    }
+
     public boolean isPendingReview() {
         return reviewStatus == ReportReviewStatus.PENDING;
     }
@@ -201,8 +213,12 @@ public class Report {
     }
 
     public void removePhoto(ReportPhoto photo) {
-        checks.removeIf(check -> check.refersTo(photo));
+        removeChecksForPhoto(photo);
         photos.remove(photo);
+    }
+
+    public void removeChecksForPhoto(ReportPhoto photo) {
+        checks.removeIf(check -> check.refersTo(photo));
     }
 
     public void addFile(ReportFile file) {
