@@ -1,0 +1,47 @@
+@import 'tailwindcss';
+
+/* 디자인 토큰: 계획서 [그림 4-2 / 화면 3] 기준
+   어두운 사이드바 + 밝은 작업 영역 + 노란색 포인트 */
+@theme {
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR',
+    'Malgun Gothic', sans-serif;
+
+  --color-ink-950: #0d1118;
+  --color-ink-900: #121823;
+  --color-ink-800: #1b2330;
+  --color-ink-700: #2a3443;
+  --color-ink-400: #8792a2;
+
+  --color-canvas: #f3f4f6;
+  --color-line: #e5e7eb;
+
+  --color-brand: #f5b400;
+  --color-brand-strong: #e0a200;
+  --color-brand-soft: #fff6d9;
+
+  --color-ok: #15803d;
+  --color-ok-soft: #e8f6ec;
+  --color-warn: #b45309;
+  --color-warn-soft: #fff4e0;
+  --color-bad: #dc2626;
+  --color-bad-soft: #fdecec;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: #111827;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 숫자 폭 고정 (진행률·시간 정렬) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

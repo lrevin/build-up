@@ -1,0 +1,97 @@
+import axios from 'axios';
+import { API_BASE_URL } from '../config';
+import { tokenStorage } from '../services/tokenStorage';
+import { ENDPOINTS, USE_REFRESH_TOKEN } from './endpoints';
+
+export const AUTH_LOGOUT_EVENT = 'auth:logout';
+
+const http = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10_000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// refresh 전용 (인터셉터 재귀 방지)
+const bare = axios.create({ baseURL: API_BASE_URL, timeout: 10_000 });
+
+// ───────── Request: Authorization 헤더 주입 ─────────
+http.interceptors.request.use((config) => {
+  const token = tokenStorage.getAccessToken();
+  if (token && !config.skipAuth) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ───────── Response: 401 → refresh 1회 (동시 401은 refresh 하나를 공유) ─────────
+let refreshPromise = null;
+
+const forceLogout = () => {
+  tokenStorage.clear();
+  window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT)); // AuthContext가 받아서 /login 이동
+};
+
+const refreshAccessToken = async () => {
+  const refreshToken = tokenStorage.getRefreshToken();
+  if (!refreshToken) throw new Error('NO_REFRESH_TOKEN');
+  // TODO(백엔드 확인): RefreshRequest 필드명
+  const { data } = await bare.post(ENDPOINTS.AUTH.REFRESH, { refreshToken });
+  tokenStorage.setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+  return data.accessToken;
+};
+
+const NO_REFRESH_URLS = [ENDPOINTS.AUTH.LOGIN, ENDPOINTS.AUTH.REFRESH, ENDPOINTS.AUTH.LOGOUT];
+
+http.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const original = error.config;
+    const status = error.response?.status;
+
+    if (
+      status !== 401 ||
+      !original ||
+      original._retry ||
+      original.skipAuth ||
+      NO_REFRESH_URLS.includes(original.url)
+    ) {
+      return Promise.reject(normalizeError(error));
+    }
+
+    if (!USE_REFRESH_TOKEN) {
+      forceLogout();
+      return Promise.reject(normalizeError(error));
+    }
+
+    original._retry = true;
+    try {
+      refreshPromise ??= refreshAccessToken().finally(() => {
+        refreshPromise = null;
+      });
+      const newToken = await refreshPromise;
+      original.headers.Authorization = `Bearer ${newToken}`;
+      return http(original);
+    } catch {
+      forceLogout();
+      return Promise.reject(normalizeError(error));
+    }
+  },
+);
+
+// ───────── 에러 정규화: 화면은 { status, code, message } 하나만 다룬다 ─────────
+// 백엔드 AuthException(HttpStatus, code, message) 형식 기준
+export function normalizeError(error) {
+  if (error?.isNormalized) return error;
+  const res = error?.response;
+  const body = res?.data;
+  return {
+    isNormalized: true,
+    status: res?.status ?? 0, // 0 = 네트워크/타임아웃
+    code: body?.code ?? (error?.code === 'ECONNABORTED' ? 'TIMEOUT' : 'UNKNOWN'),
+    message:
+      body?.message ??
+      (res ? `요청 처리 중 오류가 발생했습니다. (${res.status})` : '서버에 연결할 수 없습니다.'),
+  };
+}
+
+export default http;
