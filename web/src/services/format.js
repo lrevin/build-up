@@ -58,3 +58,32 @@ export function formatDelta(from, to) {
 }
 
 export const clampPercent = (v) => Math.min(100, Math.max(0, Number(v) || 0));
+
+// 진행한 작업은 여러 개를 한 줄씩 입력한다 (앱 3주차 변경)
+export const workLines = (work) =>
+  String(work ?? '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+// 목록용 한 줄 요약: '첫 작업 외 2건'
+export function workSummary(work, fallback = '') {
+  const lines = workLines(work);
+  if (lines.length === 0) return fallback;
+  return lines.length === 1 ? lines[0] : `${lines[0]} 외 ${lines.length - 1}건`;
+}
+
+export const todayYmd = (d = new Date()) => dateKey(d.toISOString());
+
+export function addDaysYmd(days, base = new Date()) {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return dateKey(d.toISOString());
+}
+
+// 'YYYY-MM-DD' 까지 남은 날 (음수 = 지남)
+export function daysUntil(ymd, now = new Date()) {
+  if (!ymd) return null;
+  const [y, m, d] = ymd.split('-').map(Number);
+  return dayDiff(new Date(y, m - 1, d), now);
+}

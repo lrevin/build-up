@@ -5,6 +5,7 @@ export const queryKeys = {
     info: () => ['hq', 'info'],
     sites: () => ['hq', 'sites'],
     reports: () => ['hq', 'reports'],
+    materials: () => ['hq', 'materials'],
   },
   sites: {
     all: ['sites'],

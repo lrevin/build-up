@@ -9,9 +9,10 @@ import ProgressHistoryChart from '../components/domain/ProgressHistoryChart';
 import ReportListItem from '../components/domain/ReportListItem';
 import ReportReviewPanel from '../components/domain/ReportReviewPanel';
 import PhotoTimeline from '../components/domain/PhotoTimeline';
+import ProcessProgress from '../components/domain/ProcessProgress';
 import { flattenPages, useHqReports, useHqSites } from '../hooks/queries/useHqQueries';
-import { useSiteReports } from '../hooks/queries/useSiteQueries';
-import { REVIEW_STATUS } from '../constants/enums';
+import { useSite, useSiteReports } from '../hooks/queries/useSiteQueries';
+import { PROGRESS_MODE, PROGRESS_MODE_LABEL, REVIEW_STATUS } from '../constants/enums';
 import { formatFullDate, formatPercent, formatRelative, isToday } from '../services/format';
 
 export default function DashboardPage() {
@@ -120,35 +121,45 @@ export default function DashboardPage() {
 
 function SiteOverview({ site, onSelectReport, selectedReportId }) {
   const reportsQuery = useSiteReports(site.id);
+  const { data: detail } = useSite(site.id);
   const reports = flattenPages(reportsQuery.data);
+  const isAuto = detail?.progressMode === PROGRESS_MODE.AUTO;
 
   return (
     <>
       <Card>
         <CardHeader
-          title={`${site.name} 진척 현황`}
-          subtitle={`${site.workType ?? '공사 종류 미입력'} · ${site.address} · 현장 관리자 ${site.ownerName} · ${site.memberCount}명`}
+          title={`${site.name} ${isAuto ? '공정 현황' : '진척 현황'}`}
+          subtitle={`${site.workType ?? '공사 종류 미입력'} · ${site.address} · 현장 관리자 ${site.ownerName} · ${site.memberCount}명 · 진행률 ${PROGRESS_MODE_LABEL[detail?.progressMode ?? 'manual']}`}
           right={
             <Link to={`/sites/${site.id}`} className="flex items-center gap-1 font-semibold text-gray-700 hover:text-gray-900">
               현장 상세 <Icon name="arrowRight" size={14} />
             </Link>
           }
         />
-        <div className="px-5 pt-2 pb-4">
+        <div className="px-5 pt-3 pb-4">
+          {isAuto && (
+            <div className="mb-4">
+              <ProcessProgress processes={detail.processes} reports={reports} />
+            </div>
+          )}
           {reportsQuery.isPending ? (
             <LoadingBlock />
           ) : reports.length === 0 ? (
             <EmptyState title="아직 보고가 없어요." />
           ) : (
-            <ProgressHistoryChart reports={reports} />
+            !isAuto && <ProgressHistoryChart reports={reports} />
           )}
           <div className="mt-2 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-2.5">
             <span className="text-[12px] text-gray-500">
               전체 진행률
+              {!isAuto && (
               <span className="ml-3 inline-flex items-center gap-1 text-[11px] text-gray-400">
                 <i className="h-2 w-2 rounded-full bg-ink-900" /> 검토 완료
                 <i className="ml-2 h-2 w-2 rounded-full bg-brand" /> 검토 대기
               </span>
+              )}
+              {isAuto && <span className="ml-2 text-[11px] text-gray-400">공정 진행률 × 비중 합계</span>}
             </span>
             <span className="tabular text-lg font-extrabold text-gray-900">{formatPercent(site.overallProgress)}</span>
           </div>

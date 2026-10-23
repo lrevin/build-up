@@ -16,6 +16,8 @@ const PATHS = {
   file: 'M14 3H6v18h12V7zM14 3v4h4',
   users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7M22 21v-1a6 6 0 0 0-4-5.6',
   arrowRight: 'M5 12h14M13 6l6 6-6 6',
+  box: 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
+  download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
 };
 
 export default function Icon({ name, size = 18, className = '', strokeWidth = 1.8 }) {

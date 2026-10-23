@@ -1,7 +1,7 @@
 import Badge from '../common/Badge';
 import ProgressBar from '../common/ProgressBar';
 import { daysSince, formatPercent, formatRelative } from '../../services/format';
-import { STALE_REPORT_DAYS } from '../../constants/enums';
+import { PROGRESS_MODE, STALE_REPORT_DAYS } from '../../constants/enums';
 
 // 현장 카드: 현장명·공사 종류·전체 진행률·마지막 보고·검토 대기 배지 (계획서 화면 3)
 export default function SiteCard({ site, selected = false, onSelect }) {
@@ -20,7 +20,9 @@ export default function SiteCard({ site, selected = false, onSelect }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-[13px] font-bold text-gray-900">{site.name}</p>
-          <p className="truncate text-[11px] text-gray-500">{site.workType ?? '공사 종류 미입력'}</p>
+          <p className="truncate text-[11px] text-gray-500">{site.workType ?? '공사 종류 미입력'}
+            {site.progressMode === PROGRESS_MODE.AUTO && ' · 공정 자동 계산'}
+          </p>
         </div>
         {pending > 0 ? (
           <Badge tone="brand">검토 대기 {pending}</Badge>

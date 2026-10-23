@@ -8,6 +8,9 @@ import ProgressHistoryChart from '../components/domain/ProgressHistoryChart';
 import ReportListItem from '../components/domain/ReportListItem';
 import ReportReviewPanel from '../components/domain/ReportReviewPanel';
 import PhotoTimeline from '../components/domain/PhotoTimeline';
+import ProcessProgress from '../components/domain/ProcessProgress';
+import WorklogExport from '../components/domain/WorklogExport';
+import { PROGRESS_MODE, PROGRESS_MODE_LABEL } from '../constants/enums';
 import { useSite, useSiteReports } from '../hooks/queries/useSiteQueries';
 import { flattenPages } from '../hooks/queries/useHqQueries';
 import { formatPercent, formatRelative } from '../services/format';
@@ -40,7 +43,11 @@ export default function SiteDetailPage() {
       <Link to="/sites" className="mb-2 inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-800">
         <Icon name="left" size={14} /> 현장 목록
       </Link>
-      <PageHeader title={site.name} subtitle={`${site.workType ?? '공사 종류 미입력'} · ${site.address}`} />
+      <PageHeader
+        title={site.name}
+        subtitle={`${site.workType ?? '공사 종류 미입력'} · ${site.address} · 진행률 ${PROGRESS_MODE_LABEL[site.progressMode ?? 'manual']}`}
+        right={<WorklogExport siteId={site.id} />}
+      />
 
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat label="전체 진행률" value={formatPercent(site.overallProgress)} />
@@ -52,8 +59,17 @@ export default function SiteDetailPage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-w-0 space-y-4">
+          {site.progressMode === PROGRESS_MODE.AUTO && (
+            <Card>
+              <CardHeader title="공정 현황" subtitle="공정별 진행률 × 비중으로 전체 진행률을 자동 계산" />
+              <div className="px-5 pt-3 pb-4">
+                <ProcessProgress processes={site.processes} reports={reports} overall={site.overallProgress} />
+              </div>
+            </Card>
+          )}
+
           <Card>
-            <CardHeader title="진행률 추이" subtitle="보고마다 입력된 현장 전체 진행률" />
+            <CardHeader title="진행률 추이" subtitle="보고마다 기록된 현장 전체 진행률" />
             <div className="px-5 pt-2 pb-4">
               {reports.length > 0 ? <ProgressHistoryChart reports={reports} /> : <EmptyState title="아직 보고가 없어요." />}
             </div>

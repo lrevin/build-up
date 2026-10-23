@@ -16,7 +16,8 @@ npm run dev        # http://localhost:5173
 
 | 계정 | 비밀번호 | 용도 |
 | --- | --- | --- |
-| `hq@buildup.dev` | `buildup1234` | 본사 관계자 (정상 로그인) |
+| `hq@buildup.dev` | `buildup1234` | 본사 관리자 (승인·보완 요청·자재 처리 가능) |
+| `hq2@buildup.dev` | `buildup1234` | 본사 직원 (조회만 가능) |
 | `site@buildup.dev` | `buildup1234` | 현장 관리자 (웹 접근 차단 확인용) |
 
 더미 데이터는 메모리에만 있어서 새로고침하면 처음 상태로 돌아갑니다.
@@ -31,11 +32,7 @@ VITE_USE_DUMMY=false
 
 `/api` 요청은 vite proxy가 `http://localhost:8080`으로 넘깁니다 (`vite.config.js`).
 
-전환 전에 팀에서 확정해야 하는 것 (코드에 `TODO(백엔드 확인)` 표시):
-
-1. 보고 검토 상태값 표기 — `src/constants/enums.js`, `src/api/reportsApi.js`
-2. 본사 계정 구분 값 (`/api/auth/me`의 `role`) — `src/constants/enums.js`
-3. 로그인 응답·refresh 요청 필드명 — `src/api/authApi.js`, `src/api/axiosInstance.js`
+상태값·계정 구분·로그인 응답 형식은 `docs/API_약속.md`에 맞춰 두었습니다. 서버가 실행되면 이 설정만 바꾸면 됩니다.
 
 ## 화면
 
@@ -44,8 +41,9 @@ VITE_USE_DUMMY=false
 | `/login` | 로그인 (본사·시스템 관리자만 통과) |
 | `/` | 대시보드: 현장 카드, 선택 현장 진행률 추이·최근 보고·사진 타임라인, 승인 대기 보고 처리 |
 | `/reports` | 보고 승인: 상태·현장별 필터, 승인 / 보완 요청 |
+| `/materials` | 자재 요청: 현장 자재 요청 승인 / 반려 (반려 사유 필수) |
 | `/sites` | 현장 관리: 연결된 현장 목록 |
-| `/sites/:siteId` | 현장 상세: 진행률 추이, 보고 이력, 전체 사진 타임라인 |
+| `/sites/:siteId` | 현장 상세: 공정 현황(자동 계산 현장), 진행률 추이, 보고 이력, 사진 타임라인, 작업일보 엑셀 내려받기 |
 | `/photos` | 사진 기록: 현장별 사진을 촬영일 순으로 |
 
 ## 폴더 구조
@@ -68,8 +66,11 @@ src/
 
 ## 데이터 형식 기준
 
-응답 모양은 레포의 공용 계약 `app/types.ts`(SiteSummary, Site, Report, ReportPage, HqInfo)를 따릅니다.
-진행률은 보고자가 입력한 현장 전체 진행률(`reports.to_progress`)을 그대로 씁니다 (V9 이후 공정 가중치 합산 아님).
+- 값 약속: `docs/API_약속.md` (검토 상태 `pending/approved/revision`, 계정 `role`·`hqRole`·`canReviewReports`, 로그인 토큰, 오류 `{ message }`)
+- 응답 모양: `app/types.ts` (SiteSummary, Site, Report, ReportPage, HqInfo, MaterialRequest)
+- 진행률: 현장마다 `progressMode`가 `manual`(보고자가 직접 입력) 또는 `auto`(공정 진행률 × 가중치 합계)
+- 승인 버튼은 보고·자재 요청마다 서버가 내려주는 `canReview` / `canApprove`로 표시합니다. 본사 직원(`hqRole: member`)은 조회만 할 수 있습니다.
+- 더미 모드의 작업일보는 엑셀에서 열리는 CSV로 내려받습니다. 실서버는 `POST /api/sites/{id}/worklog/link`가 주는 주소를 엽니다.
 
 ## 알아둘 점
 

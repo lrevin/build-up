@@ -1,11 +1,13 @@
 import ReviewBadge from './ReviewBadge';
+import Badge from '../common/Badge';
 import Icon from '../common/Icon';
-import { formatDelta, formatMonthDay, formatTime } from '../../services/format';
+import { formatDelta, formatMonthDay, formatTime, workSummary } from '../../services/format';
 
 // 보고 목록 한 줄. showSite: 여러 현장 보고가 섞인 목록에서 현장명 표시
 export default function ReportListItem({ report, active = false, onClick, showSite = false }) {
   const thumbs = report.photos?.length ? report.photos.map((p) => p.url) : report.photoUris ?? [];
   const hasChecks = report.checks?.length > 0;
+  const hasProcess = report.processTo != null && report.processName;
 
   return (
     <button
@@ -26,12 +28,14 @@ export default function ReportListItem({ report, active = false, onClick, showSi
       </div>
       <div className="min-w-0 flex-1">
         {showSite && <p className="truncate text-[11px] text-gray-500">{report.siteName}</p>}
-        <p className="truncate text-[13px] text-gray-800">
-          {report.work || report.processName}
-          <span className="ml-1 text-gray-400">(사진 {thumbs.length}장)</span>
+        <p className="flex items-center gap-1.5 truncate text-[13px] text-gray-800">
+          {hasProcess && <Badge tone="neutral">{report.processName}</Badge>}
+          <span className="truncate">{workSummary(report.work, report.processName)}</span>
+          <span className="shrink-0 text-gray-400">(사진 {thumbs.length}장)</span>
         </p>
         <p className="tabular text-[11px] text-gray-500">
-          {report.author} · {report.to.toFixed(1)}% ({formatDelta(report.from, report.to)})
+          {report.author} · 전체 {report.to.toFixed(1)}% ({formatDelta(report.from, report.to)})
+          {hasProcess && ` · ${report.processName} ${report.processTo.toFixed(1)}%`}
         </p>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">

@@ -2,13 +2,14 @@ import { NavLink, Outlet } from 'react-router-dom';
 import Icon from '../components/common/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { useHqSites } from '../hooks/queries/useHqQueries';
-import { USER_ROLE_LABEL } from '../constants/enums';
+import { HQ_ROLE_LABEL, USER_ROLE_LABEL } from '../constants/enums';
 import { USE_DUMMY } from '../config';
 
 const NAV = [
   { to: '/', label: '대시보드', icon: 'dashboard', end: true },
   { to: '/sites', label: '현장 관리', icon: 'sites' },
   { to: '/reports', label: '보고 승인', icon: 'review', badge: 'pending' },
+  { to: '/materials', label: '자재 요청', icon: 'box', badge: 'materials' },
   { to: '/photos', label: '사진 기록', icon: 'photo' },
 ];
 
@@ -28,7 +29,10 @@ function Logo() {
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const { data: sites } = useHqSites();
-  const pendingTotal = sites?.reduce((n, s) => n + (s.pendingReviews ?? 0), 0) ?? 0;
+  const badges = {
+    pending: sites?.reduce((n, s) => n + (s.pendingReviews ?? 0), 0) ?? 0,
+    materials: sites?.reduce((n, s) => n + (s.pendingMaterials ?? 0), 0) ?? 0,
+  };
 
   return (
     <div className="flex h-full min-h-screen">
@@ -50,9 +54,9 @@ export default function DashboardLayout() {
             >
               <Icon name={item.icon} size={17} />
               <span className="flex-1">{item.label}</span>
-              {item.badge === 'pending' && pendingTotal > 0 && (
+              {item.badge && badges[item.badge] > 0 && (
                 <span className="tabular rounded-full bg-brand px-1.5 text-[11px] font-bold text-gray-900">
-                  {pendingTotal}
+                  {badges[item.badge]}
                 </span>
               )}
             </NavLink>
@@ -70,7 +74,7 @@ export default function DashboardLayout() {
             <p className="truncate text-[13px] font-semibold text-white">{user?.name}</p>
             <p className="truncate text-[11px] text-ink-400">
               {user?.company ? `${user.company} · ` : ''}
-              {USER_ROLE_LABEL[user?.role] ?? ''}
+              {HQ_ROLE_LABEL[user?.hqRole] ?? USER_ROLE_LABEL[user?.role] ?? ''}
             </p>
           </div>
           <button

@@ -7,6 +7,7 @@ import SitesPage from '../pages/SitesPage';
 import SiteDetailPage from '../pages/SiteDetailPage';
 import ReportsPage from '../pages/ReportsPage';
 import PhotosPage from '../pages/PhotosPage';
+import MaterialsPage from '../pages/MaterialsPage';
 import NotFoundPage from '../pages/NotFoundPage';
 
 export default function AppRoutes() {
@@ -24,6 +25,7 @@ export default function AppRoutes() {
         <Route path="sites" element={<SitesPage />} />
         <Route path="sites/:siteId" element={<SiteDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="materials" element={<MaterialsPage />} />
         <Route path="photos" element={<PhotosPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

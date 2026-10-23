@@ -1,5 +1,5 @@
-// 서버 없이 동작하는 가짜 API. 실제 API와 같은 함수 모양·응답 형식·에러 형식을 지킨다.
-// 권한 규칙은 app/dummy.ts(= 서버 ReportService.canReview 규칙)와 맞춘다.
+// 서버 없이 동작하는 가짜 API. 실제 API와 같은 함수 모양·응답 형식·오류 형식을 지킨다.
+// 권한 규칙은 docs/API_약속.md 와 app/dummy.ts(= 서버 규칙)에 맞춘다.
 import { createSeed, DEMO_PASSWORD } from './seed';
 import { tokenStorage } from '../services/tokenStorage';
 
@@ -9,7 +9,8 @@ const DELAY_MS = 250;
 const delay = (ms = DELAY_MS) => new Promise((r) => setTimeout(r, ms));
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
-const apiError = (status, code, message) => ({ isNormalized: true, status, code, message });
+// 오류 응답: API 약속 4번 { message } + HTTP 상태 코드
+const apiError = (status, message) => ({ isNormalized: true, status, code: null, message });
 
 async function respond(fn) {
   await delay();
@@ -29,22 +30,36 @@ function currentUser() {
   const token = tokenStorage.getAccessToken();
   const id = token?.startsWith(TOKEN_PREFIX) ? token.slice(TOKEN_PREFIX.length) : null;
   const user = db.users.find((u) => u.id === id);
-  if (!user) throw apiError(401, 'UNAUTHORIZED', '로그인이 필요합니다.');
+  if (!user) throw apiError(401, '로그인이 필요합니다.');
   return user;
+}
+
+function tokenResponse(user) {
+  const now = Date.now();
+  return {
+    user: publicUser(user),
+    tokenType: 'Bearer',
+    accessToken: `${TOKEN_PREFIX}${user.id}`,
+    refreshToken: `dummy-refresh.${user.id}`,
+    accessTokenExpiresAt: new Date(now + 60 * 60_000).toISOString(),
+    refreshTokenExpiresAt: new Date(now + 30 * 86_400_000).toISOString(),
+  };
 }
 
 // ───────── 권한 ─────────
 const isHqOf = (user, site) => user.role === 'hq' && !!site.companyId && user.hqCompanyId === site.companyId;
+// 본사 쪽 검토·자재 승인 권한: 본사 관리자만 (API 약속 2번 canReviewReports)
+const canHqReview = (user, site) => isHqOf(user, site) && user.canReviewReports;
 
 function visibleSites(user) {
   if (user.role === 'system') return db.sites;
   if (user.role === 'hq') return db.sites.filter((s) => isHqOf(user, s));
-  throw apiError(403, 'FORBIDDEN', '본사 관계자만 볼 수 있어요.');
+  throw apiError(403, '본사 관계자만 볼 수 있어요.');
 }
 
 function findVisibleSite(user, siteId) {
   const site = visibleSites(user).find((s) => s.id === siteId);
-  if (!site) throw apiError(404, 'SITE_NOT_FOUND', '현장을 찾을 수 없습니다.');
+  if (!site) throw apiError(404, '현장을 찾을 수 없습니다.');
   return site;
 }
 
@@ -56,12 +71,24 @@ const reportsOf = (siteId) => db.reports.filter((r) => r.siteId === siteId).sort
 function withPermissions(user, row) {
   const site = siteById(row.siteId);
   const canReview =
-    row.review.status === 'pending' && row.authorId !== user.id && (site.ownerId === user.id || isHqOf(user, site));
+    row.review.status === 'pending' && row.authorId !== user.id && (site.ownerId === user.id || canHqReview(user, site));
   return { ...row, siteName: site.name, canEdit: false, canDelete: false, canReview };
 }
 
-function siteProgress(siteId) {
-  return reportsOf(siteId)[0]?.to ?? 0;
+// 자동 계산 현장의 공정별 현재 진행률 = 그 공정의 가장 최근 보고 값
+function processesOf(site) {
+  if (site.progressMode !== 'auto') return [];
+  const reports = reportsOf(site.id);
+  return site.processes.map((p) => {
+    const last = reports.find((r) => r.processKey === p.key);
+    return {
+      key: p.key,
+      name: p.name,
+      weight: p.weight,
+      progress: last?.processTo ?? p.start,
+      lastReportedAt: last?.createdAt ?? null,
+    };
+  });
 }
 
 function summary(user, s) {
@@ -72,13 +99,28 @@ function summary(user, s) {
     address: s.address,
     ownerName: userName(s.ownerId),
     memberCount: s.memberIds.length,
-    overallProgress: siteProgress(s.id),
+    overallProgress: reports[0]?.to ?? 0,
     isOwner: s.ownerId === user.id,
     workType: s.workType,
     lastReportedAt: reports[0]?.createdAt ?? null,
     hqName: db.companies.find((c) => c.id === s.companyId)?.name ?? null,
-    pendingMaterials: 0,
+    pendingMaterials: db.materials.filter((m) => m.siteId === s.id && m.status === 'requested').length,
     pendingReviews: reports.filter((r) => withPermissions(user, r).canReview).length,
+    progressMode: s.progressMode,
+  };
+}
+
+function withMaterialPermissions(user, m) {
+  const site = siteById(m.siteId);
+  const open = m.status === 'requested';
+  const canDecide = open && (site.ownerId === user.id || canHqReview(user, site));
+  return {
+    ...m,
+    siteName: site.name,
+    hqLinked: !!site.companyId,
+    canCancel: false,
+    canApprove: canDecide,
+    canReject: canDecide,
   };
 }
 
@@ -90,19 +132,53 @@ function pageOf(list, cursor, size) {
   return { items, nextCursor: next, total: start === 0 ? list.length : null };
 }
 
+// 작업일보: 실서버는 엑셀 내려받기 주소를 주지만, 더미는 엑셀에서 열리는 CSV를 만든다
+const csvCell = (v) => {
+  const s = v == null ? '' : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+const WEATHER = { sunny: '맑음', cloudy: '흐림', rain: '비', snow: '눈' };
+const REVIEW = { pending: '검토 대기', approved: '승인', revision: '보완 요청' };
+
+function worklogCsv(site, from, to) {
+  const inRange = (iso) => {
+    const d = new Date(iso);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return key >= from && key <= to;
+  };
+  const rows = reportsOf(site.id)
+    .filter((r) => inRange(r.createdAt))
+    .reverse()
+    .map((r) => {
+      const d = new Date(r.createdAt);
+      return [
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+        r.author,
+        r.processName || '',
+        r.work,
+        r.from,
+        r.to,
+        WEATHER[r.workLog?.weather] ?? '',
+        r.workLog?.workers ?? '',
+        r.workLog?.equipment ?? '',
+        r.photos?.length ?? 0,
+        r.memo,
+        REVIEW[r.review?.status] ?? '',
+        r.review?.comment ?? '',
+      ];
+    });
+  const header = ['날짜', '시각', '작성자', '공정', '진행한 작업', '보고 전 진행률(%)', '보고 후 진행률(%)', '날씨', '투입 인원', '장비', '사진 수', '메모', '검토 상태', '검토 코멘트'];
+  const body = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+  return { csv: `﻿${body}`, count: rows.length }; // BOM: 엑셀에서 한글 깨짐 방지
+}
+
 export const mockServer = {
   login: (email, password) =>
     respond(() => {
       const user = db.users.find((u) => u.email === String(email).trim().toLowerCase());
-      if (!user || password !== DEMO_PASSWORD) {
-        throw apiError(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않습니다.');
-      }
-      return {
-        tokenType: 'Bearer',
-        accessToken: `${TOKEN_PREFIX}${user.id}`,
-        refreshToken: `dummy-refresh.${user.id}`,
-        user: publicUser(user),
-      };
+      if (!user || password !== DEMO_PASSWORD) throw apiError(401, '이메일 또는 비밀번호가 올바르지 않습니다.');
+      return tokenResponse(user);
     }),
 
   me: () => respond(() => publicUser(currentUser())),
@@ -155,6 +231,8 @@ export const mockServer = {
         hqName: sum.hqName,
         latitude: s.latitude,
         longitude: s.longitude,
+        progressMode: s.progressMode,
+        processes: processesOf(s),
       };
     }),
 
@@ -162,39 +240,72 @@ export const mockServer = {
     respond(() => {
       const user = currentUser();
       findVisibleSite(user, siteId);
-      const list = reportsOf(siteId).map((r) => withPermissions(user, r));
-      return pageOf(list, cursor, size);
+      return pageOf(reportsOf(siteId).map((r) => withPermissions(user, r)), cursor, size);
     }),
 
   reviewReport: (reportId, status, comment) =>
     respond(() => {
       const user = currentUser();
       const row = db.reports.find((r) => r.id === reportId);
-      if (!row) throw apiError(404, 'REPORT_NOT_FOUND', '보고를 찾을 수 없습니다.');
+      if (!row) throw apiError(404, '보고를 찾을 수 없습니다.');
       findVisibleSite(user, row.siteId);
-      if (!['approved', 'revision'].includes(status)) {
-        throw apiError(400, 'INVALID_STATUS', '알 수 없는 검토 상태입니다.');
-      }
+      if (!['approved', 'revision'].includes(status)) throw apiError(400, '알 수 없는 검토 상태입니다.');
       const text = String(comment ?? '').trim();
-      if (status === 'revision' && !text) {
-        throw apiError(400, 'COMMENT_REQUIRED', '무엇을 보완해야 하는지 코멘트를 적어 주세요.');
-      }
-      if (text.length > 500) throw apiError(400, 'COMMENT_TOO_LONG', '코멘트는 500자까지 쓸 수 있어요.');
+      if (status === 'revision' && !text) throw apiError(400, '무엇을 보완해야 하는지 코멘트를 적어 주세요.');
+      if (text.length > 500) throw apiError(400, '코멘트는 500자까지 쓸 수 있어요.');
       if (!withPermissions(user, row).canReview) {
         throw apiError(
-          409,
-          'NOT_REVIEWABLE',
+          row.review.status !== 'pending' ? 409 : 403,
           row.review.status !== 'pending'
             ? '이미 검토한 보고예요. 목록을 새로고침해 주세요.'
-            : '현장 총관리자나 본사 관계자만 검토할 수 있어요.',
+            : '현장 총관리자나 본사 관리자만 검토할 수 있어요.',
         );
       }
-      row.review = {
-        status,
-        comment: text || null,
-        reviewer: user.name,
-        reviewedAt: new Date().toISOString(),
-      };
+      row.review = { status, comment: text || null, reviewer: user.name, reviewedAt: new Date().toISOString() };
       return withPermissions(user, row);
+    }),
+
+  getHqMaterials: () =>
+    respond(() => {
+      const user = currentUser();
+      const ids = new Set(visibleSites(user).map((s) => s.id));
+      return db.materials
+        .filter((m) => ids.has(m.siteId))
+        .sort(byNewest)
+        .map((m) => withMaterialPermissions(user, m));
+    }),
+
+  setMaterialStatus: (requestId, status, reason) =>
+    respond(() => {
+      const user = currentUser();
+      const m = db.materials.find((x) => x.id === requestId);
+      if (!m) throw apiError(404, '자재 요청을 찾을 수 없습니다.');
+      findVisibleSite(user, m.siteId);
+      if (!['approved', 'rejected'].includes(status)) throw apiError(400, '알 수 없는 처리 상태입니다.');
+      const why = String(reason ?? '').trim();
+      if (status === 'rejected' && !why) throw apiError(400, '반려 사유를 골라 주세요.');
+      const perm = withMaterialPermissions(user, m);
+      if (!perm.canApprove) {
+        throw apiError(
+          m.status !== 'requested' ? 409 : 403,
+          m.status !== 'requested' ? '이미 처리한 요청이에요. 목록을 새로고침해 주세요.' : '본사 관리자만 처리할 수 있어요.',
+        );
+      }
+      const at = new Date().toISOString();
+      m.status = status;
+      m.rejectReason = status === 'rejected' ? why : null;
+      m.timeline.push({ status, by: user.name, byHq: user.role === 'hq', at });
+      return withMaterialPermissions(user, m);
+    }),
+
+  // 실서버: POST /sites/{id}/worklog/link?from&to → { url }
+  worklogLink: (siteId, from, to) =>
+    respond(() => {
+      const user = currentUser();
+      const site = findVisibleSite(user, siteId);
+      const { csv, count } = worklogCsv(site, from, to);
+      if (count === 0) throw apiError(404, '선택한 기간에 보고가 없어요.');
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      return { url, fileName: `${site.name}_작업일보_${from}_${to}.csv` };
     }),
 };
