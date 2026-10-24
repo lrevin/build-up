@@ -1,6 +1,7 @@
 # 비밀 파일: 어느 폴더에 있어도 깃허브에 올리지 않기
 firebase-key.json
 google-services.json
+!app-project/android/app/google-services.json
 application-local.properties
 *.env
 !*.env.example
