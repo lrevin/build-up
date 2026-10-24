@@ -92,6 +92,11 @@ public class SiteProcess {
         this.lastReportedAt = approvedAt;
     }
 
+    public void initializeProgress(BigDecimal initialProgress) {
+        this.progress = initialProgress;
+        this.lastReportedAt = null;
+    }
+
     public void updateDefinition(
             String name,
             BigDecimal weight,

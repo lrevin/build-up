@@ -32,6 +32,7 @@ import SignUpScreen from './src/screens/SignUpScreen';
 import ServerScreen from './src/screens/ServerScreen';
 import SiteCodeScreen from './src/screens/SiteCodeScreen';
 import SiteSettingsScreen from './src/screens/SiteSettingsScreen';
+import ProgressModeScreen from './src/screens/ProgressModeScreen';
 import SitesScreen from './src/screens/SitesScreen';
 import { colors } from './src/theme';
 
@@ -97,6 +98,7 @@ function RootNavigator() {
           <Stack.Screen name="CreateSite" component={CreateSiteScreen} />
           <Stack.Screen name="SiteCode" component={SiteCodeScreen} />
           <Stack.Screen name="SiteSettings" component={SiteSettingsScreen} />
+          <Stack.Screen name="ProgressMode" component={ProgressModeScreen} />
           <Stack.Screen name="JoinSite" component={JoinSiteScreen} />
           <Stack.Screen name="Report" component={ReportScreen} />
           <Stack.Screen name="History" component={HistoryScreen} />
@@ -116,7 +118,12 @@ function RootNavigator() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
           <Stack.Screen name="SignUp" component={SignUpScreen} />
-          <Stack.Screen name="Server" component={ServerScreen} />
+          {/* 로그인 후 서버 설정에서 연결을 바꿔 로그아웃되면 이 화면에 남지 않고 로그인 화면으로 */}
+          <Stack.Screen
+            name="Server"
+            component={ServerScreen}
+            navigationKey="guest"
+          />
         </>
       )}
     </Stack.Navigator>

@@ -10,6 +10,8 @@ public interface SiteRepository extends JpaRepository<Site, Long> {
 
     boolean existsByCode(String code);
 
+    boolean existsByOwnerId(Long ownerId);
+
     @EntityGraph(attributePaths = {"owner", "company"})
     Optional<Site> findByCode(String code);
 }

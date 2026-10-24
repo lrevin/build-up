@@ -67,6 +67,11 @@ public class Notification {
             String referenceType,
             Long referenceId
     ) {
+        if ((referenceType == null) != (referenceId == null)) {
+            throw new IllegalArgumentException(
+                    "Notification reference type and id must be provided together"
+            );
+        }
         this.user = user;
         this.site = site;
         this.type = type;

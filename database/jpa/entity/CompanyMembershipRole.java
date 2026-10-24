@@ -7,4 +7,8 @@ public enum CompanyMembershipRole {
     public boolean canReviewReports() {
         return this == HQ_MANAGER;
     }
+
+    public String apiValue() {
+        return this == HQ_MANAGER ? "manager" : "member";
+    }
 }
