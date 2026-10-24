@@ -18,11 +18,19 @@ async function respond(fn) {
 }
 
 // ───────── 인증 ─────────
+// 이메일 인증 코드 · 인증 완료 토큰 · 카카오 연결 (더미 내부 상태)
+const auth = {
+  codes: new Map(), // 'email:주소' | 'phone:숫자' → { code, sentAt, expiresAt, tries }
+  verified: new Map(), // ev_ / pv_ 토큰 → { kind, target, expiresAt }
+  kakaoSignups: new Map(), // signupToken → { kakaoId, email, name, expiresAt }
+  kakaoAccounts: new Map(), // kakaoId → userId
+};
 const TOKEN_PREFIX = 'dummy-access.';
 
 function publicUser(u) {
-  const { hqCompanyId, ...rest } = u;
+  const { hqCompanyId, password, ...rest } = u; // 더미 내부용 칸은 응답에서 뺀다
   void hqCompanyId;
+  void password;
   return rest;
 }
 
@@ -75,6 +83,17 @@ function findMemberSite(user, siteId) {
 }
 
 const siteById = (id) => db.sites.find((s) => s.id === id);
+
+// 참여 코드로 현장 찾기 (서버 SiteService.preview / join)
+function siteByCode(user, code) {
+  if (user.role === 'hq' || user.role === 'system') {
+    throw apiError(403, '본사 관계자는 현장 총관리자가 본사 코드로 연결한 현장을 볼 수 있어요.');
+  }
+  if (!/^\d{6}$/.test(String(code))) throw apiError(400, '참여 코드는 6자리 숫자예요.');
+  const site = db.sites.find((s) => s.code === String(code));
+  if (!site) throw apiError(404, '해당 코드의 현장을 찾을 수 없습니다.');
+  return site;
+}
 const userName = (id) => db.users.find((u) => u.id === id)?.name ?? '-';
 const byNewest = (a, b) => (a.createdAt < b.createdAt ? 1 : -1);
 const reportsOf = (siteId) => db.reports.filter((r) => r.siteId === siteId).sort(byNewest);
@@ -188,8 +207,164 @@ export const mockServer = {
   login: (email, password) =>
     respond(() => {
       const user = db.users.find((u) => u.email === String(email).trim().toLowerCase());
-      if (!user || password !== DEMO_PASSWORD) throw apiError(401, '이메일 또는 비밀번호가 올바르지 않습니다.');
+      // 시드 계정은 공통 비밀번호, 더미에서 새로 가입한 계정은 가입할 때 쓴 비밀번호
+      // 카카오 전용 계정(password: null)은 비밀번호 로그인 불가 (서버: password_hash NULL)
+      const expected = user && 'password' in user ? user.password : DEMO_PASSWORD;
+      if (!user || expected == null || password !== expected) throw apiError(401, '이메일 또는 비밀번호가 올바르지 않습니다.');
       return tokenResponse(user);
+    }),
+
+  // 서버 AuthService.signUp 규칙 그대로 (검사 문구도 SignUpRequest 와 같음)
+  signUp: (input) =>
+    respond(() => {
+      const role = input.role;
+      if (!['admin', 'worker', 'hq'].includes(role)) throw apiError(400, '역할이 올바르지 않습니다.');
+      // 카카오 가입: signupToken 으로 카카오 계정 확인 (비밀번호 없음, 카카오가 준 이메일은 인증된 것으로 봄)
+      const kakao = input.signupToken ? auth.kakaoSignups.get(input.signupToken) : null;
+      if (input.signupToken && (!kakao || kakao.expiresAt < Date.now())) {
+        throw apiError(400, '카카오 가입 시간이 지났어요. 카카오 로그인을 다시 해 주세요.');
+      }
+      const name = String(input.name ?? '').trim();
+      const email = String(kakao?.email ?? input.email ?? '').trim().toLowerCase();
+      const phone = String(input.phone ?? '').trim();
+      const company = String(input.company ?? '').trim();
+      const code = String(input.companyCode ?? '').trim();
+      if (!name) throw apiError(400, '이름을 입력해 주세요.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw apiError(400, '이메일 형식이 올바르지 않아요.');
+      if (!phone) throw apiError(400, '휴대폰 번호를 입력해 주세요.');
+      if (!kakao && String(input.password ?? '').length < 8) throw apiError(400, '비밀번호는 8자 이상이어야 해요.');
+      if (db.users.some((u) => u.email === email)) throw apiError(409, '이미 가입된 이메일입니다.');
+      // 가입 인증 (서버 SignupVerification.check): 이메일(카카오가 준 이메일이면 생략) + 휴대폰 둘 다 필수.
+      // 인증한 값과 가입 값이 달라도 실패
+      const ok = (token, kind, target) => {
+        const v = auth.verified.get(token);
+        return !!v && v.kind === kind && v.target === target && v.expiresAt > Date.now();
+      };
+      if (!(kakao?.email && kakao.email === email) && !ok(input.emailVerificationToken, 'email', email)) {
+        throw apiError(400, '이메일 인증을 완료해 주세요.');
+      }
+      if (!ok(input.phoneVerificationToken, 'phone', phone.replace(/\D/g, ''))) {
+        throw apiError(400, '휴대폰 인증을 완료해 주세요.');
+      }
+
+      const findCompany = () => {
+        const c = db.companies.find((x) => x.code === code);
+        if (!c) throw apiError(404, '해당 코드의 본사를 찾을 수 없습니다.\n코드를 다시 확인해 주세요.');
+        return c;
+      };
+      const user = {
+        id: `u-${Date.now()}`, name, email, phone, role, password: input.password,
+        company: null, companyCode: null, hqName: null, hqRole: null, canReviewReports: false,
+      };
+      if (role === 'admin') {
+        const hq = code ? findCompany() : null; // 본사 코드가 있으면 그 본사에 보고, 없으면 최고 책임자
+        user.hqName = hq?.name ?? null;
+        user.company = hq?.name ?? null; // 현장 관리자 회사·사무소명은 DB(V11)에 칸이 없어 저장 안 됨
+      }
+      if (role === 'hq') {
+        let hq;
+        if (code) {
+          hq = findCompany(); // 본사 코드로 합류 = 본사 직원
+        } else {
+          if (!company) throw apiError(400, '본사명을 입력해 주세요.');
+          let newCode;
+          do newCode = String(100000 + Math.floor(Math.random() * 900000));
+          while (db.companies.some((c) => c.code === newCode));
+          hq = { id: `c-${Date.now()}`, name: company, code: newCode };
+          db.companies.push(hq); // 새 본사 등록 = 본사 관리자
+        }
+        Object.assign(user, {
+          company: hq.name, companyCode: hq.code, hqCompanyId: hq.id,
+          hqRole: code ? 'member' : 'manager', canReviewReports: !code,
+        });
+      }
+      if (kakao) {
+        user.password = null; // 카카오 전용 계정 → 비밀번호 로그인 불가
+        auth.kakaoAccounts.set(kakao.kakaoId, user.id);
+        auth.kakaoSignups.delete(input.signupToken);
+      }
+      auth.verified.delete(input.emailVerificationToken); // 한 번 가입에 쓴 토큰은 다시 못 씀
+      auth.verified.delete(input.phoneVerificationToken);
+      db.users.push(user);
+      return tokenResponse(user);
+    }),
+
+  // 가입 인증 코드 (서버 SignupVerification · Verifications 와 같은 규칙·문구)
+  // 실서버는 메일·문자로 보냄. 더미는 보낼 곳이 없으므로 응답에 코드를 같이 넣어 화면에 보여 준다
+  sendCode: (kind, raw) =>
+    respond(() => {
+      const target = kind === 'email' ? String(raw ?? '').trim().toLowerCase() : String(raw ?? '').replace(/\D/g, '');
+      if (kind === 'email') {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target)) throw apiError(400, '이메일 형식이 올바르지 않아요.');
+        if (db.users.some((u) => u.email === target)) throw apiError(409, '이미 가입된 이메일입니다.');
+      } else if (!/^01[016789]\d{7,8}$/.test(target)) {
+        throw apiError(400, '휴대폰 번호를 확인해 주세요.');
+      }
+      const key = `${kind}:${target}`;
+      const prev = auth.codes.get(key);
+      const wait = prev ? Math.ceil((prev.sentAt + 60_000 - Date.now()) / 1000) : 0;
+      if (wait > 0) throw apiError(429, `${wait}초 뒤에 다시 받을 수 있어요.`);
+      const code = String(100000 + Math.floor(Math.random() * 900000));
+      auth.codes.set(key, { code, sentAt: Date.now(), expiresAt: Date.now() + 300_000, tries: 0 });
+      return { expiresInSeconds: 300, resendAfterSeconds: 60, dummyCode: code };
+    }),
+
+  verifyCode: (kind, raw, input) =>
+    respond(() => {
+      const target = kind === 'email' ? String(raw ?? '').trim().toLowerCase() : String(raw ?? '').replace(/\D/g, '');
+      const row = auth.codes.get(`${kind}:${target}`);
+      if (!row) throw apiError(400, '인증 코드를 먼저 받아 주세요.');
+      if (row.tries >= 5) throw apiError(429, '인증 코드를 5번 틀렸어요. 코드를 다시 받아 주세요.');
+      if (row.expiresAt < Date.now()) throw apiError(400, '인증 코드가 만료됐어요. 다시 받아 주세요.');
+      if (String(input).trim() !== row.code) {
+        row.tries += 1;
+        if (row.tries >= 5) throw apiError(429, '인증 코드를 5번 틀렸어요. 코드를 다시 받아 주세요.');
+        throw apiError(400, `인증 코드가 맞지 않아요. (${5 - row.tries}번 남음)`);
+      }
+      auth.codes.delete(`${kind}:${target}`); // 다시 받기 60초 대기는 서버와 달리 생략(더미)
+      const token = `${kind === 'email' ? 'ev_' : 'pv_'}${Math.random().toString(36).slice(2)}`;
+      auth.verified.set(token, { kind, target, expiresAt: Date.now() + 1_800_000 });
+      return kind === 'email'
+        ? { emailVerificationToken: token, expiresInSeconds: 1800 }
+        : { phoneVerificationToken: token, expiresInSeconds: 1800 };
+    }),
+
+  // 카카오: 더미는 카카오 서버 대신 고정된 카카오 사용자 한 명으로 흉내 낸다
+  kakaoLogin: (code) =>
+    respond(() => {
+      if (!String(code ?? '').startsWith('dummy-kakao')) throw apiError(400, '카카오 로그인에 실패했어요. 다시 시도해 주세요.');
+      const kakao = { kakaoId: 'kakao-1001', email: 'kakao.user@kakao.com', name: '카카오사용자' };
+      const userId = auth.kakaoAccounts.get(kakao.kakaoId);
+      const user = db.users.find((u) => u.id === userId);
+      if (user) return tokenResponse(user);
+      if (db.users.some((u) => u.email === kakao.email)) {
+        throw apiError(409, '이미 이메일로 가입된 계정이에요. 이메일로 로그인해 주세요.');
+      }
+      const signupToken = `st_${Math.random().toString(36).slice(2)}`;
+      auth.kakaoSignups.set(signupToken, { ...kakao, expiresAt: Date.now() + 600_000 });
+      return { signupRequired: true, signupToken, provider: 'kakao', email: kakao.email, name: kakao.name, expiresInSeconds: 600 };
+    }),
+
+  previewSite: (code) =>
+    respond(() => {
+      const user = currentUser();
+      const site = siteByCode(user, code);
+      return {
+        id: site.id,
+        name: site.name,
+        address: site.address,
+        ownerName: userName(site.ownerId),
+        memberCount: site.memberIds.length,
+        alreadyJoined: isMember(user, site),
+      };
+    }),
+
+  joinSite: (code) =>
+    respond(() => {
+      const user = currentUser();
+      const site = siteByCode(user, code);
+      if (!isMember(user, site)) site.memberIds.push(user.id);
+      return summary(user, site);
     }),
 
   me: () => respond(() => publicUser(currentUser())),
@@ -240,7 +415,7 @@ export const mockServer = {
         address: s.address,
         ownerId: s.ownerId,
         ownerName: sum.ownerName,
-        code: null, // 참여 코드는 현장 총관리자에게만
+        code: s.ownerId === user.id ? s.code : null, // 참여 코드는 현장 총관리자에게만 (서버 SiteService 와 같음)
         memberCount: sum.memberCount,
         overallProgress: sum.overallProgress,
         workType: s.workType,

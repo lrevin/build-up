@@ -29,7 +29,7 @@ export default function SitesPage() {
         ) : sites.length === 0 ? (
           <EmptyState
             title="연결된 현장이 없어요."
-            description="현장 관리자가 앱에서 본사 코드를 입력하면 여기에 표시돼요."
+            description="현장 총관리자가 본사 코드를 입력하면(가입할 때 또는 앱 내 정보) 여기에 표시돼요."
           />
         ) : (
           <div className="overflow-x-auto">

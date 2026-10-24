@@ -10,7 +10,7 @@ import ReportListItem from '../components/domain/ReportListItem';
 import ReportReviewPanel from '../components/domain/ReportReviewPanel';
 import PhotoTimeline from '../components/domain/PhotoTimeline';
 import ProcessProgress from '../components/domain/ProcessProgress';
-import { flattenPages, useHqReports, useHqSites } from '../hooks/queries/useHqQueries';
+import { flattenPages, useHqInfo, useHqReports, useHqSites } from '../hooks/queries/useHqQueries';
 import { useSite, useSiteReports } from '../hooks/queries/useSiteQueries';
 import { PROGRESS_MODE, PROGRESS_MODE_LABEL, REVIEW_STATUS } from '../constants/enums';
 import { formatFullDate, formatPercent, formatRelative, isToday } from '../services/format';
@@ -18,6 +18,7 @@ import { formatFullDate, formatPercent, formatRelative, isToday } from '../servi
 export default function DashboardPage() {
   const sitesQuery = useHqSites();
   const reportsQuery = useHqReports();
+  const { data: hq } = useHqInfo();
   const [search, setSearch] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState(null);
   const [selectedReportId, setSelectedReportId] = useState(null);
@@ -66,7 +67,15 @@ export default function DashboardPage() {
 
       {filteredSites.length === 0 ? (
         <Card>
-          <EmptyState title="검색 결과가 없어요." />
+          {sites.length === 0 ? (
+            // 막 가입한 본사: 연결된 현장이 아직 없음 → 본사 코드 공유 안내
+            <EmptyState
+              title="아직 연결된 현장이 없어요."
+              description={`현장 총관리자에게 본사 코드${hq?.code ? ` ${hq.code}` : ''}를 알려 주세요. 현장 관리자가 가입하거나 내 정보에서 이 코드를 입력하면 현장이 여기에 표시돼요.`}
+            />
+          ) : (
+            <EmptyState title="검색 결과가 없어요." />
+          )}
         </Card>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
