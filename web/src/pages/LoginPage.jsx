@@ -3,25 +3,31 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { USE_DUMMY } from '../config';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../mocks/seed';
+import { homePathFor } from '../constants/enums';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function LoginPage() {
-  const { login, isAuthenticated, restoring } = useAuth();
+  const { login, isAuthenticated, restoring, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState(USE_DUMMY ? DEMO_ACCOUNTS[0].email : '');
   const [password, setPassword] = useState(USE_DUMMY ? DEMO_PASSWORD : '');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  useDocumentTitle('로그인');
 
-  if (!restoring && isAuthenticated) return <Navigate to="/" replace />;
+  if (!restoring && isAuthenticated) return <Navigate to={homePathFor(user?.role)} replace />;
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await login({ email, password });
-      navigate(location.state?.from ?? '/', { replace: true });
+      const me = await login({ email, password });
+      // 원래 가려던 주소가 내 페이지 영역이면 그곳으로, 아니면 계정 종류의 첫 화면으로
+      const home = homePathFor(me.role);
+      const from = location.state?.from;
+      navigate(from && from.startsWith(home) ? from : home, { replace: true });
     } catch (err) {
       setError(err?.message ?? '로그인에 실패했습니다.');
     } finally {
@@ -36,7 +42,7 @@ export default function LoginPage() {
           <p className="text-[34px] font-black tracking-tight text-white">
             Build<span className="text-brand">Up</span>
           </p>
-          <p className="mt-1 text-sm text-ink-400">본사 관리자 대시보드</p>
+          <p className="mt-1 text-sm text-ink-400">공사 현장 보고 · 관리</p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3 rounded-2xl bg-white p-6 shadow-xl">

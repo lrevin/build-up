@@ -5,10 +5,11 @@ import { ENDPOINTS, USE_REFRESH_TOKEN } from './endpoints';
 
 export const AUTH_LOGOUT_EVENT = 'auth:logout';
 
+// Content-Type 은 기본값을 두지 않는다: 일반 객체는 axios가 JSON으로, FormData(보고 사진)는 브라우저가
+// multipart boundary 와 함께 정한다. 기본값을 application/json 으로 두면 axios가 FormData를 JSON으로 바꿔 사진이 빠진다.
 const http = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10_000,
-  headers: { 'Content-Type': 'application/json' },
 });
 
 // refresh 전용 (인터셉터 재귀 방지)
@@ -34,9 +35,9 @@ const forceLogout = () => {
 const refreshAccessToken = async () => {
   const refreshToken = tokenStorage.getRefreshToken();
   if (!refreshToken) throw new Error('NO_REFRESH_TOKEN');
-  // TODO(백엔드 확인): RefreshRequest 필드명
+  // API 약속 3번: 요청 { refreshToken }, 응답은 로그인과 같은 모양 (refreshToken 은 그대로)
   const { data } = await bare.post(ENDPOINTS.AUTH.REFRESH, { refreshToken });
-  tokenStorage.setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+  tokenStorage.setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken ?? refreshToken });
   return data.accessToken;
 };
 

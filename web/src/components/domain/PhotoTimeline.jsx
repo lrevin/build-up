@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import PhotoViewer from './PhotoViewer';
 import { EmptyState } from '../common/StateViews';
-import { dateKey, formatMonthDay, formatTime } from '../../services/format';
+import { dateKey, formatMonthDay, formatTime, workSummary } from '../../services/format';
 
 // 사진 타임라인: 보고 사진을 촬영일(없으면 보고일) 기준으로 날짜별로 묶어 최신순 표시
 export default function PhotoTimeline({ reports, maxDays }) {
@@ -11,7 +11,7 @@ export default function PhotoTimeline({ reports, maxDays }) {
     const items = reports.flatMap((r) =>
       (r.photos ?? []).map((p) => ({
         ...p,
-        caption: r.work || r.processName,
+        caption: [r.processName, workSummary(r.work)].filter(Boolean).join(' · '),
         when: p.takenAt ?? r.createdAt,
         reportId: r.id,
       })),

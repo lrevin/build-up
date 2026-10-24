@@ -5,9 +5,11 @@ import ReviewBadge from './ReviewBadge';
 import ReportChecks from './ReportChecks';
 import PhotoViewer from './PhotoViewer';
 import { useReviewReport } from '../../hooks/queries/useReviewReport';
+import { useUpdateMemo } from '../../hooks/queries/useMyQueries';
 import { useToast } from '../common/Toast';
+import { useAuth } from '../../contexts/AuthContext';
 import { REVIEW_COMMENT_MAX, REVIEW_STATUS, WEATHER_LABEL } from '../../constants/enums';
-import { formatDateTime, formatDelta, formatRelative, formatTime } from '../../services/format';
+import { formatDateTime, formatDelta, formatRelative, formatTime, workLines, workSummary } from '../../services/format';
 
 // 보고 상세 + 승인 / 보완 요청 (계획서 화면 3 오른쪽 패널)
 export default function ReportReviewPanel({ report, onReviewed }) {
@@ -21,11 +23,14 @@ function ReviewPanelBody({ report, onReviewed }) {
   const [viewerIndex, setViewerIndex] = useState(null);
   const review = useReviewReport();
   const toast = useToast();
+  const { user } = useAuth();
+  const lines = workLines(report.work);
+  const hasProcess = report.processTo != null && report.processName;
 
   const photos = report.photos?.length
     ? report.photos
     : (report.photoUris ?? []).map((url) => ({ url, takenAt: null, latitude: null, longitude: null }));
-  const viewerItems = photos.map((p) => ({ ...p, caption: report.work }));
+  const viewerItems = photos.map((p) => ({ ...p, caption: workSummary(report.work, report.processName) }));
   const status = report.review?.status;
 
   const submit = (nextStatus) => {
@@ -54,7 +59,15 @@ function ReviewPanelBody({ report, onReviewed }) {
           <p className="truncate text-[12px] text-gray-500">
             {report.siteName} · {report.author}
           </p>
-          <p className="mt-0.5 text-[15px] font-bold leading-snug text-gray-900">{report.work || report.processName}</p>
+          {lines.length <= 1 ? (
+            <p className="mt-0.5 text-[15px] font-bold leading-snug text-gray-900">{lines[0] ?? report.processName}</p>
+          ) : (
+            <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[14px] font-bold leading-snug text-gray-900">
+              {lines.map((l, i) => (
+                <li key={i}>{l}</li>
+              ))}
+            </ul>
+          )}
         </div>
         <span className="shrink-0 text-[11px] text-gray-500">{formatRelative(report.createdAt)}</span>
       </div>
@@ -92,6 +105,12 @@ function ReviewPanelBody({ report, onReviewed }) {
           {formatDelta(report.from, report.to)}
         </Badge>
       </div>
+      {hasProcess && (
+        <p className="tabular -mt-1 text-[12px] text-gray-500">
+          {report.processName} 공정 {report.processFrom?.toFixed(1)}% → {report.processTo.toFixed(1)}% (가중치로 전체
+          진행률 자동 계산)
+        </p>
+      )}
 
       <ReportChecks checks={report.checks} />
 
@@ -171,10 +190,20 @@ function ReviewPanelBody({ report, onReviewed }) {
           </div>
           {report.review?.comment && <p className="mt-1.5 text-gray-700">“{report.review.comment}”</p>}
           {status === REVIEW_STATUS.PENDING && (
-            <p className="mt-1.5 text-gray-500">이 보고를 검토할 권한이 없어요.</p>
+            <p className="mt-1.5 text-gray-500">
+              {report.authorId === user?.id
+                ? '내가 올린 보고예요. 검토를 기다리고 있어요.'
+                : user?.role === 'hq' && !user?.canReviewReports
+                  ? '본사 관리자만 승인·보완 요청을 할 수 있어요. (현재 계정: 본사 직원)'
+                  : user?.role === 'worker'
+                    ? '현장 총관리자나 본사가 검토해요.'
+                    : '이 보고를 검토할 권한이 없어요.'}
+            </p>
           )}
         </div>
       )}
+
+      {report.canEdit && status === REVIEW_STATUS.REVISION && <ResubmitBox report={report} />}
 
       {viewerIndex != null && (
         <PhotoViewer
@@ -184,6 +213,50 @@ function ReviewPanelBody({ report, onReviewed }) {
           onClose={() => setViewerIndex(null)}
         />
       )}
+    </div>
+  );
+}
+
+// 작성자: 보완 요청을 받은 보고 → 메모에 보완 내용을 적어 다시 제출 (서버가 '검토 대기'로 되돌림)
+function ResubmitBox({ report }) {
+  const [memo, setMemo] = useState(report.memo ?? '');
+  const [error, setError] = useState(null);
+  const update = useUpdateMemo();
+  const toast = useToast();
+
+  const submit = () => {
+    setError(null);
+    if (!memo.trim()) {
+      setError('무엇을 보완했는지 적어 주세요.');
+      return;
+    }
+    update.mutate(
+      { reportId: report.id, memo: memo.trim() },
+      { onSuccess: () => toast.show('보완 내용을 다시 제출했어요.'), onError: (e) => setError(e.message) },
+    );
+  };
+
+  return (
+    <div className="space-y-2 rounded-lg border border-bad/30 bg-bad-soft/50 p-3">
+      <p className="text-[12px] font-semibold text-bad">보완해서 다시 제출</p>
+      <textarea
+        value={memo}
+        onChange={(e) => setMemo(e.target.value.slice(0, 500))}
+        rows={3}
+        aria-label="보완 내용"
+        placeholder="보완한 내용을 적어 주세요 (예: 근접 사진 추가 촬영함)"
+        className="w-full resize-none rounded-lg border border-line bg-white px-3 py-2 text-[13px] outline-none focus:border-ink-900"
+      />
+      <p className="text-[11px] text-gray-500">사진을 다시 올려야 하면 새 보고로 작성해 주세요.</p>
+      {error && <p className="text-[12px] text-bad">{error}</p>}
+      <button
+        type="button"
+        onClick={submit}
+        disabled={update.isPending}
+        className="w-full rounded-lg bg-ink-900 py-2.5 text-sm font-bold text-white hover:bg-ink-800 disabled:opacity-50"
+      >
+        {update.isPending ? '제출 중…' : '다시 제출'}
+      </button>
     </div>
   );
 }

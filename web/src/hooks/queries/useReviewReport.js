@@ -26,6 +26,7 @@ export function useReviewReport() {
       // 2) 검토 대기 수·진행률 등 서버 계산값은 다시 불러온다
       queryClient.invalidateQueries({ queryKey: queryKeys.hq.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.my.all });
     },
   });
 }
