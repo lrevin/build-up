@@ -124,6 +124,88 @@ Authorization: Bearer {accessToken}   (없어도 됨)
 
 - 앱 구현: `api/client.ts`의 `refreshAccessToken`
 
+### 가입 인증 (이메일 · 휴대폰 둘 다 필수)
+
+흐름: 이메일 **인증 받기** → 메일로 온 6자리 입력 → **확인** / 휴대폰도 같은 방식(문자) → **가입하기**
+
+```http
+POST /api/auth/email/send      { "email": "kim@example.com" }
+POST /api/auth/phone/send      { "phone": "010-1234-5678" }
+```
+```json
+{ "expiresInSeconds": 300, "resendAfterSeconds": 60 }
+```
+- 코드는 6자리 숫자, **5분** 유효. 같은 이메일·번호로 **60초 안에** 다시 받으면 `429`
+- 이미 가입된 이메일이면 `409` `{ "message": "이미 가입된 이메일입니다." }`
+- 휴대폰은 010·011·016~019로 시작하는 번호만(`-`는 있어도 없어도 됨). 아니면 `400`
+- 한 기기(IP)에서 1시간에 10번까지 받을 수 있음(문자 요금 보호). 넘으면 `429`
+
+```http
+POST /api/auth/email/verify    { "email": "kim@example.com", "code": "482913" }
+POST /api/auth/phone/verify    { "phone": "010-1234-5678", "code": "482913" }
+```
+```json
+{ "emailVerificationToken": "ev_9f3a...", "expiresInSeconds": 1800 }
+{ "phoneVerificationToken": "pv_51c0...", "expiresInSeconds": 1800 }
+```
+- 틀리면 `400` `{ "message": "인증 코드가 맞지 않아요. (4번 남음)" }`, 5번 틀리면 `429`(코드를 다시 받아야 함)
+- 만료면 `400` `{ "message": "인증 코드가 만료됐어요. 다시 받아 주세요." }`
+- 받은 토큰은 **30분 안에** 가입 요청에 같이 보냅니다. 한 번 가입에 쓰면 다시 못 씁니다.
+
+가입 요청에 칸이 늘었습니다.
+```http
+POST /api/auth/signup
+{
+  "role": "worker", "name": "김현장", "email": "kim@example.com", "phone": "010-1234-5678",
+  "password": "8자이상비밀번호", "company": null, "companyCode": null,
+  "emailVerificationToken": "ev_9f3a...",
+  "phoneVerificationToken": "pv_51c0...",
+  "signupToken": null
+}
+```
+- 인증이 없거나, 만료됐거나, **인증한 이메일·번호와 다른 값**으로 가입하면 `400`
+  `{ "message": "이메일 인증을 완료해 주세요." }` / `{ "message": "휴대폰 인증을 완료해 주세요." }`
+- 응답은 로그인과 같은 모양(바로 로그인 상태)
+- 현장 관리자의 `company`(회사·사무소명)는 DB 설계(V11)에 칸이 없어 **저장되지 않습니다.** 화면에서 받지 않아도 됩니다.
+
+> **메일·문자 설정이 없는 서버(개발 PC)**: 실제로 보내지 않고 **서버 로그**에 코드가 찍힙니다.
+> `[개발 모드] 이메일 인증 코드 123456 → kim@example.com` 를 보고 입력하면 됩니다.
+
+### 카카오 로그인
+
+**웹** (인가 코드 방식, 비밀 키는 서버에만)
+1. 카카오 로그인 화면으로 이동:
+   `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id={REST API 키}&redirect_uri={웹 주소}/oauth/kakao/callback`
+2. 콜백 화면이 받은 `code`를 서버로
+```http
+POST /api/auth/oauth/kakao
+{ "code": "인가코드", "redirectUri": "http://localhost:5173/oauth/kakao/callback" }
+```
+
+**앱** (카카오 SDK 없이 휴대폰 브라우저로)
+1. 브라우저로 `GET /api/auth/oauth/kakao/start` 열기 → 서버가 카카오 로그인 화면으로 보냄
+2. 로그인을 마치면 서버가 `buildupapp://oauth/kakao?ticket=...` 로 앱을 다시 엶
+3. `POST /api/auth/oauth/kakao/ticket { "ticket": "..." }` 로 결과 받기(티켓은 2분, 한 번만)
+
+**응답 (웹·앱 같음)**
+- 이미 카카오로 가입한 사람 → 로그인과 같은 응답
+- 처음 온 사람 → 가입 필요
+```json
+{ "signupRequired": true, "signupToken": "st_...", "provider": "kakao",
+  "email": "kim@kakao.com", "name": "김현장", "expiresInSeconds": 600 }
+```
+- 가입 화면(역할·휴대폰 인증 등)을 보여 주고, `signup`에 `signupToken`을 같이 보냅니다(10분 유효).
+  - `password`는 보내지 않습니다(카카오 계정은 비밀번호 없이 카카오로만 로그인).
+  - `email`이 있으면(카카오가 인증한 이메일) 그 이메일 그대로 가입할 때 **이메일 인증 생략**. 휴대폰 인증은 항상 필요.
+  - `email`이 `null`이면(카카오 이메일 동의 안 함) 이메일 입력 + 이메일 인증.
+- 같은 이메일로 이미 이메일 가입한 계정이 있으면 `409`
+  `{ "message": "이미 이메일로 가입된 계정이에요. 이메일로 로그인해 주세요." }` (자동 연결하지 않음)
+- 서버에 카카오 키가 없으면 `503` `{ "message": "카카오 로그인이 아직 설정되지 않았어요." }`
+
+**카카오 개발자 콘솔에 등록할 Redirect URI**
+- 앱: `{서버 주소}/api/auth/oauth/kakao/callback` (예: `http://localhost:8080/api/auth/oauth/kakao/callback`)
+- 웹: `{웹 주소}/oauth/kakao/callback`
+
 ---
 
 ## 4. 오류 응답
@@ -133,7 +215,8 @@ Authorization: Bearer {accessToken}   (없어도 됨)
 { "message": "가중치 합계가 100%가 되어야 해요. (지금 90%)" }
 ```
 - 화면에는 `message`를 그대로 보여 주면 됩니다.
-- 주요 상태 코드: `401` 로그인 필요, `403` 권한 없음, `404` 없음, `409` 충돌, `429` 너무 많이 틀림
+- 주요 상태 코드: `401` 로그인 필요, `403` 권한 없음, `404` 없음, `409` 충돌, `429` 너무 많이 틀림·너무 자주 요청,
+  `503` 메일·문자·카카오 연결 실패 또는 설정 없음
 
 ---
 
