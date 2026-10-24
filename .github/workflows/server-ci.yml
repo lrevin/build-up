@@ -1,0 +1,35 @@
+# 서버 자동 검사: api/server 코드가 바뀌어 올라오면 빌드와 테스트를 돌린다
+# 결과는 저장소 → Actions 탭 (초록 ✔ 통과 / 빨간 ✘ 실패)
+name: 서버 빌드·테스트
+
+on:
+  push:
+    branches: [main]
+    paths: ['api/server/**', '.github/workflows/server-ci.yml']
+  pull_request:
+    paths: ['api/server/**', '.github/workflows/server-ci.yml']
+
+jobs:
+  server:
+    name: 서버 빌드·테스트
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: 테스트 (메모리 DB 사용, MySQL 필요 없음)
+        run: ./gradlew test --no-daemon
+      - name: 실행 파일(jar) 만들기
+        run: ./gradlew bootJar --no-daemon
+      - name: 테스트 결과 올리기
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-test-report
+          path: api/server/build/reports/tests/test
