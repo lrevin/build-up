@@ -4,6 +4,13 @@ export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login', // POST { email, password } → { user, accessToken, refreshToken, ... }
     SIGNUP: '/auth/signup', // POST SignUpRequest { role, name, email, phone, password, company?, companyCode? } → 로그인과 같은 모양
+    // 가입 인증 (API 약속 3번 "가입 인증": 이메일·휴대폰 둘 다 필수)
+    EMAIL_SEND: '/auth/email/send', // POST { email } → { expiresInSeconds, resendAfterSeconds }
+    EMAIL_VERIFY: '/auth/email/verify', // POST { email, code } → { emailVerificationToken, expiresInSeconds }
+    PHONE_SEND: '/auth/phone/send', // POST { phone } → { expiresInSeconds, resendAfterSeconds }
+    PHONE_VERIFY: '/auth/phone/verify', // POST { phone, code } → { phoneVerificationToken, expiresInSeconds }
+    // 카카오 (API 약속 3번 "카카오 로그인" 웹 방식)
+    OAUTH_KAKAO: '/auth/oauth/kakao', // POST { code, redirectUri } → 로그인 응답 | { signupRequired, signupToken, provider, email, name, expiresInSeconds }
     REFRESH: '/auth/refresh', // POST { refreshToken } → 로그인과 같은 모양
     LOGOUT: '/auth/logout', // POST { refreshToken }
     ME: '/auth/me', // GET → user

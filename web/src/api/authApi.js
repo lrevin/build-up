@@ -25,6 +25,35 @@ export const authApi = {
       ? mockServer.signUp(input).then(toSession)
       : http.post(ENDPOINTS.AUTH.SIGNUP, input, { skipAuth: true }).then((r) => toSession(r.data)),
 
+  // 가입 인증 코드 보내기 / 확인 (가입 전, 로그인 없이). 확인 성공 → 30분짜리 인증 토큰
+  sendEmailCode: (email) =>
+    USE_DUMMY
+      ? mockServer.sendCode('email', email)
+      : http.post(ENDPOINTS.AUTH.EMAIL_SEND, { email }, { skipAuth: true }).then((r) => r.data),
+
+  verifyEmailCode: (email, code) =>
+    USE_DUMMY
+      ? mockServer.verifyCode('email', email, code)
+      : http.post(ENDPOINTS.AUTH.EMAIL_VERIFY, { email, code }, { skipAuth: true }).then((r) => r.data),
+
+  sendPhoneCode: (phone) =>
+    USE_DUMMY
+      ? mockServer.sendCode('phone', phone)
+      : http.post(ENDPOINTS.AUTH.PHONE_SEND, { phone }, { skipAuth: true }).then((r) => r.data),
+
+  verifyPhoneCode: (phone, code) =>
+    USE_DUMMY
+      ? mockServer.verifyCode('phone', phone, code)
+      : http.post(ENDPOINTS.AUTH.PHONE_VERIFY, { phone, code }, { skipAuth: true }).then((r) => r.data),
+
+  // 카카오 인가 코드 → 가입된 사람: 세션 { accessToken, refreshToken, user }
+  //                    처음 온 사람: { signupRequired: true, signupToken, email, name } 그대로
+  kakaoLogin: ({ code, redirectUri }) =>
+    (USE_DUMMY
+      ? mockServer.kakaoLogin(code, redirectUri)
+      : http.post(ENDPOINTS.AUTH.OAUTH_KAKAO, { code, redirectUri }, { skipAuth: true }).then((r) => r.data)
+    ).then((data) => (data.signupRequired ? data : toSession(data))),
+
   me: () => (USE_DUMMY ? mockServer.me() : http.get(ENDPOINTS.AUTH.ME).then((r) => r.data)),
 
   // 실패해도 화면 로그아웃은 진행한다

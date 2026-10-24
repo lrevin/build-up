@@ -68,9 +68,19 @@ export function AuthProvider({ children }) {
   // 가입에 성공하면 바로 로그인 상태가 된다 (앱과 같음)
   const signUp = useCallback(async (input) => startSession(await authApi.signUp(input)), [startSession]);
 
+  // 카카오: 이미 가입한 사람은 로그인 → { user }, 처음 온 사람은 → { signup: { signupToken, email, name } }
+  const loginWithKakao = useCallback(
+    async (params) => {
+      const result = await authApi.kakaoLogin(params);
+      if (result.signupRequired) return { signup: result };
+      return { user: await startSession(result) };
+    },
+    [startSession],
+  );
+
   const value = useMemo(
-    () => ({ user, isAuthenticated: !!user, restoring, login, signUp, logout }),
-    [user, restoring, login, signUp, logout],
+    () => ({ user, isAuthenticated: !!user, restoring, login, signUp, loginWithKakao, logout }),
+    [user, restoring, login, signUp, loginWithKakao, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

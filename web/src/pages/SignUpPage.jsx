@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Icon from '../components/common/Icon';
 import useDocumentTitle from '../hooks/useDocumentTitle';
 import { homePathFor, USER_ROLE } from '../constants/enums';
+import { KAKAO_LOGIN } from '../config';
+import KakaoButton, { OrDivider } from '../components/domain/KakaoButton';
+import VerifyField, { EMAIL_RE, PHONE_RE } from '../components/domain/VerifyField';
 
 // 회원가입: 역할 선택 → 정보 입력 (앱 RoleSelectScreen · SignUpScreen 과 같은 흐름·규칙)
 // 서버: POST /api/auth/signup (AuthDtos.SignUpRequest). 성공하면 바로 로그인된다.
+// 가입 인증(이메일·휴대폰 필수)과 카카오 가입은 docs/API_약속.md 3번 "가입 인증"·"카카오 로그인".
 
 const ROLE_OPTIONS = [
   {
@@ -29,17 +33,8 @@ const ROLE_OPTIONS = [
   },
 ];
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // 서버 SignUpRequest 길이 제한
-const LIMIT = { NAME: 50, EMAIL: 120, PHONE: 20, PASSWORD_MIN: 8, PASSWORD_MAX: 64, COMPANY: 80 };
-
-// 010-1234-5678 형태로 자동 하이픈 (앱과 같음)
-function formatPhone(v) {
-  const d = v.replace(/\D/g, '').slice(0, 11);
-  if (d.length < 4) return d;
-  if (d.length < 8) return `${d.slice(0, 3)}-${d.slice(3)}`;
-  return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
-}
+const LIMIT = { NAME: 50, PASSWORD_MIN: 8, PASSWORD_MAX: 64, COMPANY: 80 };
 
 const inputCls =
   'w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink-900 aria-[invalid=true]:border-bad';
@@ -84,13 +79,14 @@ function Segment({ label, value, options, onChange }) {
   );
 }
 
-function RoleStep({ role, setRole, onNext }) {
+function RoleStep({ role, setRole, onNext, kakao }) {
   return (
     <div className="space-y-3 rounded-2xl bg-white p-6 shadow-xl">
       <div>
         <h1 className="text-[18px] font-bold text-gray-900">어떤 역할로 가입하시나요?</h1>
         <p className="mt-1 text-[12px] text-gray-500">작업자로 가입해도 나중에 앱의 내 정보에서 현장 관리자로 바꿀 수 있어요.</p>
       </div>
+      {kakao && <KakaoNotice kakao={kakao} />}
       <div role="radiogroup" aria-label="가입 역할" className="space-y-2">
         {ROLE_OPTIONS.map((o) => {
           const active = role === o.role;
@@ -135,11 +131,27 @@ function RoleStep({ role, setRole, onNext }) {
       >
         다음
       </button>
+      {KAKAO_LOGIN && !kakao && (
+        <>
+          <OrDivider />
+          <KakaoButton label="카카오로 가입하기" />
+        </>
+      )}
     </div>
   );
 }
 
-function InfoStep({ role, onBack }) {
+function KakaoNotice({ kakao }) {
+  return (
+    <p className="flex items-center gap-2 rounded-lg bg-[#FEE500]/40 px-3 py-2 text-[12px] text-gray-800">
+      <span className="font-bold">카카오 계정으로 가입</span>
+      <span className="truncate text-gray-600">{kakao.email ?? '이메일은 아래에서 입력·인증해 주세요'}</span>
+    </p>
+  );
+}
+
+// contact: { email, phone, emailToken, phoneToken } — 역할을 다시 골라도 인증한 값이 유지되도록 부모가 가진다
+function InfoStep({ role, onBack, kakao, contact, setContact }) {
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const isAdmin = role === USER_ROLE.ADMIN;
@@ -147,32 +159,43 @@ function InfoStep({ role, onBack }) {
 
   const [hqMode, setHqMode] = useState('create'); // 본사: 새 본사 등록 / 본사 코드로 합류
   const [reportMode, setReportMode] = useState('top'); // 현장 관리자: 최고 책임자 / 본사에 보고
-  const [f, setF] = useState({ name: '', company: '', companyCode: '', email: '', phone: '', password: '', password2: '' });
+  const [f, setF] = useState({ name: kakao?.name ?? '', company: '', companyCode: '', password: '', password2: '' });
   const [tried, setTried] = useState(false);
   const [serverError, setServerError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // 카카오 가입: 비밀번호 없음. 카카오가 인증한 이메일이 오면 그 이메일 그대로(이메일 인증 생략). 휴대폰 인증은 항상
+  const kakaoEmail = !!kakao?.email;
+  const needPassword = !kakao;
+  const needEmailVerify = !kakaoEmail;
+  const email = kakaoEmail ? kakao.email : contact.email;
+
   const set = (key) => (e) => {
     let v = e.target.value;
-    if (key === 'phone') v = formatPhone(v);
     if (key === 'companyCode') v = v.replace(/\D/g, '').slice(0, 6);
     setF((prev) => ({ ...prev, [key]: v }));
+    setServerError(null);
+  };
+  const setC = (patch) => {
+    setContact((prev) => ({ ...prev, ...patch }));
     setServerError(null);
   };
 
   const needCode = (isAdmin && reportMode === 'hq') || (isHq && hqMode === 'join');
   const needHqName = isHq && hqMode === 'create';
 
-  // 항목별 오류 (앱 SignUpScreen.validate 와 같은 순서·문구)
+  // 항목별 오류 (앱 SignUpScreen.validate 와 같은 순서·문구, 인증 문구는 서버와 같음)
   const errors = {};
   if (!f.name.trim()) errors.name = '이름을 입력해 주세요.';
   if (needCode && !/^\d{6}$/.test(f.companyCode))
     errors.companyCode = isAdmin ? '보고할 본사의 코드 6자리를 입력해 주세요.' : '본사 코드 6자리를 입력해 주세요.';
   if (needHqName && !f.company.trim()) errors.company = '본사명을 입력해 주세요.';
-  if (!EMAIL_RE.test(f.email.trim())) errors.email = '이메일 형식이 올바르지 않아요.';
-  if (f.phone.replace(/\D/g, '').length < 10) errors.phone = '휴대폰 번호를 확인해 주세요.';
-  if (f.password.length < LIMIT.PASSWORD_MIN) errors.password = '비밀번호는 8자 이상이어야 해요.';
-  if (f.password2 !== f.password) errors.password2 = '비밀번호가 서로 달라요.';
+  if (!EMAIL_RE.test(email.trim())) errors.email = '이메일 형식이 올바르지 않아요.';
+  else if (needEmailVerify && !contact.emailToken) errors.email = '이메일 인증을 완료해 주세요.';
+  if (!PHONE_RE.test(contact.phone.replace(/\D/g, ''))) errors.phone = '휴대폰 번호를 확인해 주세요.';
+  else if (!contact.phoneToken) errors.phone = '휴대폰 인증을 완료해 주세요.';
+  if (needPassword && f.password.length < LIMIT.PASSWORD_MIN) errors.password = '비밀번호는 8자 이상이어야 해요.';
+  if (needPassword && f.password2 !== f.password) errors.password2 = '비밀번호가 서로 달라요.';
   const show = (k) => (tried ? errors[k] : undefined);
 
   const onSubmit = async (e) => {
@@ -182,14 +205,18 @@ function InfoStep({ role, onBack }) {
     setSubmitting(true);
     setServerError(null);
     try {
+      // 서버 AuthDtos.SignUpRequest 와 같은 칸
       const me = await signUp({
         role,
         name: f.name.trim(),
-        email: f.email.trim(),
-        phone: f.phone,
-        password: f.password,
-        company: isAdmin || needHqName ? f.company.trim() || null : null,
+        email: email.trim(),
+        phone: contact.phone,
+        password: needPassword ? f.password : null,
+        company: needHqName ? f.company.trim() : null, // 현장 관리자 회사명은 DB에 칸이 없어 받지 않음
         companyCode: needCode ? f.companyCode : null,
+        emailVerificationToken: needEmailVerify ? contact.emailToken : null,
+        phoneVerificationToken: contact.phoneToken,
+        signupToken: kakao?.signupToken ?? null,
       });
       navigate(homePathFor(me.role), { replace: true, state: { welcome: true } });
     } catch (err) {
@@ -223,6 +250,7 @@ function InfoStep({ role, onBack }) {
         <h1 className="text-[18px] font-bold text-gray-900">{title}</h1>
       </div>
       <p className="rounded-lg bg-brand-soft px-3 py-2 text-[12px] text-gray-800">{guide}</p>
+      {kakao && <KakaoNotice kakao={kakao} />}
 
       <Field id="su-name" label="이름" error={show('name')}>
         <input id="su-name" autoComplete="name" maxLength={LIMIT.NAME} value={f.name} onChange={set('name')}
@@ -239,10 +267,6 @@ function InfoStep({ role, onBack }) {
                 placeholder="본사 관계자에게 받은 6자리 숫자" aria-invalid={!!show('companyCode')} className={`${inputCls} tabular`} />
             </Field>
           )}
-          <Field id="su-company" label="회사·사무소명 (선택)">
-            <input id="su-company" maxLength={LIMIT.COMPANY} value={f.company} onChange={set('company')}
-              placeholder={reportMode === 'hq' ? '비우면 본사 이름을 써요' : '예) 박철근 인력사무소'} className={inputCls} />
-          </Field>
         </>
       )}
 
@@ -264,22 +288,43 @@ function InfoStep({ role, onBack }) {
         </>
       )}
 
-      <Field id="su-email" label="이메일" hint="로그인할 때 사용해요" error={show('email')}>
-        <input id="su-email" type="email" autoComplete="email" maxLength={LIMIT.EMAIL} value={f.email} onChange={set('email')}
-          placeholder="name@example.com" aria-invalid={!!show('email')} className={inputCls} />
-      </Field>
-      <Field id="su-phone" label="휴대폰 번호" error={show('phone')}>
-        <input id="su-phone" type="tel" autoComplete="tel" maxLength={LIMIT.PHONE} value={f.phone} onChange={set('phone')}
-          placeholder="010-0000-0000" aria-invalid={!!show('phone')} className={`${inputCls} tabular`} />
-      </Field>
-      <Field id="su-password" label="비밀번호" hint="8자 이상" error={show('password')}>
-        <input id="su-password" type="password" autoComplete="new-password" maxLength={LIMIT.PASSWORD_MAX} value={f.password}
-          onChange={set('password')} aria-invalid={!!show('password')} className={inputCls} />
-      </Field>
-      <Field id="su-password2" label="비밀번호 확인" error={show('password2')}>
-        <input id="su-password2" type="password" autoComplete="new-password" maxLength={LIMIT.PASSWORD_MAX} value={f.password2}
-          onChange={set('password2')} placeholder="한 번 더 입력" aria-invalid={!!show('password2')} className={inputCls} />
-      </Field>
+      {kakaoEmail ? (
+        <Field id="su-email" label="이메일" hint="카카오 계정 이메일 (인증 완료)">
+          <input id="su-email" type="email" value={email} readOnly className={`${inputCls} bg-gray-50 text-gray-600`} />
+        </Field>
+      ) : (
+        <VerifyField
+          kind="email"
+          id="su-email"
+          value={contact.email}
+          onChange={(v) => setC({ email: v })}
+          token={contact.emailToken}
+          onToken={(t) => setC({ emailToken: t })}
+          error={show('email')}
+        />
+      )}
+      <VerifyField
+        kind="phone"
+        id="su-phone"
+        value={contact.phone}
+        onChange={(v) => setC({ phone: v })}
+        token={contact.phoneToken}
+        onToken={(t) => setC({ phoneToken: t })}
+        error={show('phone')}
+      />
+
+      {needPassword && (
+        <>
+          <Field id="su-password" label="비밀번호" hint="8자 이상" error={show('password')}>
+            <input id="su-password" type="password" autoComplete="new-password" maxLength={LIMIT.PASSWORD_MAX} value={f.password}
+              onChange={set('password')} aria-invalid={!!show('password')} className={inputCls} />
+          </Field>
+          <Field id="su-password2" label="비밀번호 확인" error={show('password2')}>
+            <input id="su-password2" type="password" autoComplete="new-password" maxLength={LIMIT.PASSWORD_MAX} value={f.password2}
+              onChange={set('password2')} placeholder="한 번 더 입력" aria-invalid={!!show('password2')} className={inputCls} />
+          </Field>
+        </>
+      )}
 
       {serverError && (
         <p role="alert" className="whitespace-pre-line rounded-lg bg-bad-soft px-3 py-2 text-[12px] text-bad">
@@ -301,6 +346,9 @@ export default function SignUpPage() {
   const { isAuthenticated, restoring, user } = useAuth();
   const [role, setRole] = useState(null);
   const [step, setStep] = useState('role');
+  const [contact, setContact] = useState({ email: '', phone: '', emailToken: null, phoneToken: null });
+  // 카카오 콜백에서 넘어온 가입 정보 { signupToken, email, name }
+  const kakao = useLocation().state?.kakao ?? null;
   useDocumentTitle('회원가입');
 
   if (!restoring && isAuthenticated) return <Navigate to={homePathFor(user?.role)} replace />;
@@ -315,9 +363,9 @@ export default function SignUpPage() {
           <p className="mt-1 text-sm text-ink-400">회원가입</p>
         </div>
         {step === 'role' ? (
-          <RoleStep role={role} setRole={setRole} onNext={() => setStep('info')} />
+          <RoleStep role={role} setRole={setRole} onNext={() => setStep('info')} kakao={kakao} />
         ) : (
-          <InfoStep key={role} role={role} onBack={() => setStep('role')} />
+          <InfoStep key={role} role={role} onBack={() => setStep('role')} kakao={kakao} contact={contact} setContact={setContact} />
         )}
         <p className="mt-4 text-center text-[13px] text-ink-400">
           이미 계정이 있나요?{' '}
