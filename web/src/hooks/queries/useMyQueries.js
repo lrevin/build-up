@@ -15,6 +15,15 @@ export const useSiteMaterials = (siteId) =>
     enabled: !!siteId,
   });
 
+// 참여 코드로 현장 참여 → 내 현장 목록 다시 불러오기
+export function useJoinSite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (code) => sitesApi.joinSite(code),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.my.all }),
+  });
+}
+
 // 보고 제출 → 현장 목록·보고 목록·본사 화면 모두 다시 불러온다
 export function useCreateReport() {
   const queryClient = useQueryClient();

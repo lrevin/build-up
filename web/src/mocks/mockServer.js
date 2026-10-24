@@ -21,8 +21,9 @@ async function respond(fn) {
 const TOKEN_PREFIX = 'dummy-access.';
 
 function publicUser(u) {
-  const { hqCompanyId, ...rest } = u;
+  const { hqCompanyId, password, ...rest } = u; // 더미 내부용 칸은 응답에서 뺀다
   void hqCompanyId;
+  void password;
   return rest;
 }
 
@@ -75,6 +76,17 @@ function findMemberSite(user, siteId) {
 }
 
 const siteById = (id) => db.sites.find((s) => s.id === id);
+
+// 참여 코드로 현장 찾기 (서버 SiteService.preview / join)
+function siteByCode(user, code) {
+  if (user.role === 'hq' || user.role === 'system') {
+    throw apiError(403, '본사 관계자는 현장 총관리자가 본사 코드로 연결한 현장을 볼 수 있어요.');
+  }
+  if (!/^\d{6}$/.test(String(code))) throw apiError(400, '참여 코드는 6자리 숫자예요.');
+  const site = db.sites.find((s) => s.code === String(code));
+  if (!site) throw apiError(404, '해당 코드의 현장을 찾을 수 없습니다.');
+  return site;
+}
 const userName = (id) => db.users.find((u) => u.id === id)?.name ?? '-';
 const byNewest = (a, b) => (a.createdAt < b.createdAt ? 1 : -1);
 const reportsOf = (siteId) => db.reports.filter((r) => r.siteId === siteId).sort(byNewest);
@@ -188,8 +200,83 @@ export const mockServer = {
   login: (email, password) =>
     respond(() => {
       const user = db.users.find((u) => u.email === String(email).trim().toLowerCase());
-      if (!user || password !== DEMO_PASSWORD) throw apiError(401, '이메일 또는 비밀번호가 올바르지 않습니다.');
+      // 시드 계정은 공통 비밀번호, 더미에서 새로 가입한 계정은 가입할 때 쓴 비밀번호
+      const expected = user?.password ?? DEMO_PASSWORD;
+      if (!user || password !== expected) throw apiError(401, '이메일 또는 비밀번호가 올바르지 않습니다.');
       return tokenResponse(user);
+    }),
+
+  // 서버 AuthService.signUp 규칙 그대로 (검사 문구도 SignUpRequest 와 같음)
+  signUp: (input) =>
+    respond(() => {
+      const role = input.role;
+      if (!['admin', 'worker', 'hq'].includes(role)) throw apiError(400, '역할이 올바르지 않습니다.');
+      const name = String(input.name ?? '').trim();
+      const email = String(input.email ?? '').trim().toLowerCase();
+      const phone = String(input.phone ?? '').trim();
+      const company = String(input.company ?? '').trim();
+      const code = String(input.companyCode ?? '').trim();
+      if (!name) throw apiError(400, '이름을 입력해 주세요.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw apiError(400, '이메일 형식이 올바르지 않아요.');
+      if (!phone) throw apiError(400, '휴대폰 번호를 입력해 주세요.');
+      if (String(input.password ?? '').length < 8) throw apiError(400, '비밀번호는 8자 이상이어야 해요.');
+      if (db.users.some((u) => u.email === email)) throw apiError(409, '이미 가입된 이메일입니다.');
+
+      const findCompany = () => {
+        const c = db.companies.find((x) => x.code === code);
+        if (!c) throw apiError(404, '해당 코드의 본사를 찾을 수 없습니다.\n코드를 다시 확인해 주세요.');
+        return c;
+      };
+      const user = {
+        id: `u-${Date.now()}`, name, email, phone, role, password: input.password,
+        company: null, companyCode: null, hqName: null, hqRole: null, canReviewReports: false,
+      };
+      if (role === 'admin') {
+        const hq = code ? findCompany() : null; // 본사 코드가 있으면 그 본사에 보고, 없으면 최고 책임자
+        user.hqName = hq?.name ?? null;
+        user.company = company || hq?.name || null;
+      }
+      if (role === 'hq') {
+        let hq;
+        if (code) {
+          hq = findCompany(); // 본사 코드로 합류 = 본사 직원
+        } else {
+          if (!company) throw apiError(400, '본사명을 입력해 주세요.');
+          let newCode;
+          do newCode = String(100000 + Math.floor(Math.random() * 900000));
+          while (db.companies.some((c) => c.code === newCode));
+          hq = { id: `c-${Date.now()}`, name: company, code: newCode };
+          db.companies.push(hq); // 새 본사 등록 = 본사 관리자
+        }
+        Object.assign(user, {
+          company: hq.name, companyCode: hq.code, hqCompanyId: hq.id,
+          hqRole: code ? 'member' : 'manager', canReviewReports: !code,
+        });
+      }
+      db.users.push(user);
+      return tokenResponse(user);
+    }),
+
+  previewSite: (code) =>
+    respond(() => {
+      const user = currentUser();
+      const site = siteByCode(user, code);
+      return {
+        id: site.id,
+        name: site.name,
+        address: site.address,
+        ownerName: userName(site.ownerId),
+        memberCount: site.memberIds.length,
+        alreadyJoined: isMember(user, site),
+      };
+    }),
+
+  joinSite: (code) =>
+    respond(() => {
+      const user = currentUser();
+      const site = siteByCode(user, code);
+      if (!isMember(user, site)) site.memberIds.push(user.id);
+      return summary(user, site);
     }),
 
   me: () => respond(() => publicUser(currentUser())),
@@ -240,7 +327,7 @@ export const mockServer = {
         address: s.address,
         ownerId: s.ownerId,
         ownerName: sum.ownerName,
-        code: null, // 참여 코드는 현장 총관리자에게만
+        code: s.ownerId === user.id ? s.code : null, // 참여 코드는 현장 총관리자에게만 (서버 SiteService 와 같음)
         memberCount: sum.memberCount,
         overallProgress: sum.overallProgress,
         workType: s.workType,

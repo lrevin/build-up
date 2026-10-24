@@ -68,6 +68,12 @@ export default function MySiteDetailPage() {
         subtitle={`${site.workType ?? '공사 종류 미입력'} · ${site.address} · 진행률 ${PROGRESS_MODE_LABEL[site.progressMode ?? 'manual']}`}
         right={
           <div className="flex flex-wrap items-center gap-2">
+            {isOwner && site.code && (
+              // 참여 코드는 총관리자에게만 내려온다. 작업자에게 알려 주면 웹·앱에서 참여할 수 있다.
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-[13px] text-gray-600">
+                참여 코드 <b className="tabular tracking-[0.15em] text-gray-900">{site.code}</b>
+              </span>
+            )}
             {isOwner && <WorklogExport siteId={site.id} />}
             <Link
               to={`/my/report/new?site=${site.id}`}

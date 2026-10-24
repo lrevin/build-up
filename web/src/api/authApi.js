@@ -19,6 +19,12 @@ export const authApi = {
           .post(ENDPOINTS.AUTH.LOGIN, { email, password }, { skipAuth: true })
           .then((r) => toSession(r.data)),
 
+  // 회원가입 (서버 AuthDtos.SignUpRequest). 성공하면 로그인과 같은 응답 → 바로 로그인 상태
+  signUp: (input) =>
+    USE_DUMMY
+      ? mockServer.signUp(input).then(toSession)
+      : http.post(ENDPOINTS.AUTH.SIGNUP, input, { skipAuth: true }).then((r) => toSession(r.data)),
+
   me: () => (USE_DUMMY ? mockServer.me() : http.get(ENDPOINTS.AUTH.ME).then((r) => r.data)),
 
   // 실패해도 화면 로그아웃은 진행한다

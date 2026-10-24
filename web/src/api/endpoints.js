@@ -3,6 +3,7 @@
 export const ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login', // POST { email, password } → { user, accessToken, refreshToken, ... }
+    SIGNUP: '/auth/signup', // POST SignUpRequest { role, name, email, phone, password, company?, companyCode? } → 로그인과 같은 모양
     REFRESH: '/auth/refresh', // POST { refreshToken } → 로그인과 같은 모양
     LOGOUT: '/auth/logout', // POST { refreshToken }
     ME: '/auth/me', // GET → user
@@ -15,6 +16,8 @@ export const ENDPOINTS = {
   },
   SITES: {
     MINE: '/sites', // GET → SiteSummary[] (내가 참여한 현장)
+    PREVIEW: (code) => `/sites/code/${code}`, // GET → SitePreview { id, name, address, ownerName, memberCount, alreadyJoined }
+    JOIN: '/sites/join', // POST { code: 6자리 } → SiteSummary (참여 코드로 현장 참여)
     DETAIL: (siteId) => `/sites/${siteId}`, // Site
     REPORTS: (siteId) => `/sites/${siteId}/reports`, // POST multipart → Report (보고 제출)
     MATERIALS: (siteId) => `/sites/${siteId}/materials`, // GET → MaterialRequest[]

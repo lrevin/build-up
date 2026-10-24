@@ -52,20 +52,25 @@ export function AuthProvider({ children }) {
       .finally(() => setRestoring(false));
   }, [clearSession]);
 
+  // 로그인·가입 응답은 같은 모양 → 토큰 저장 후 user 확정
+  const startSession = useCallback(async (session) => {
+    tokenStorage.setTokens(session);
+    const me = session.user ?? (await authApi.me());
+    setUser(me);
+    return me;
+  }, []);
+
   const login = useCallback(
-    async (credentials) => {
-      const session = await authApi.login(credentials);
-      tokenStorage.setTokens(session);
-      const me = session.user ?? (await authApi.me());
-      setUser(me);
-      return me;
-    },
-    [],
+    async (credentials) => startSession(await authApi.login(credentials)),
+    [startSession],
   );
 
+  // 가입에 성공하면 바로 로그인 상태가 된다 (앱과 같음)
+  const signUp = useCallback(async (input) => startSession(await authApi.signUp(input)), [startSession]);
+
   const value = useMemo(
-    () => ({ user, isAuthenticated: !!user, restoring, login, logout }),
-    [user, restoring, login, logout],
+    () => ({ user, isAuthenticated: !!user, restoring, login, signUp, logout }),
+    [user, restoring, login, signUp, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
