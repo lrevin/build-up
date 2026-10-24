@@ -16,10 +16,14 @@ export function useSetMaterialStatus() {
     mutationFn: ({ requestId, status, reason }) => materialsApi.setStatus(requestId, { status, reason }),
     onSuccess: (updated) => {
       // 응답으로 즉시 교체 → 같은 요청을 두 번 처리하지 않게
-      queryClient.setQueriesData({ queryKey: queryKeys.hq.materials() }, (list) =>
-        Array.isArray(list) ? list.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)) : list,
-      );
-      queryClient.invalidateQueries({ queryKey: queryKeys.hq.all }); // 현장별 대기 수 갱신
+      const replace = (list) =>
+        Array.isArray(list) ? list.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)) : list;
+      queryClient.setQueriesData({ queryKey: queryKeys.hq.materials() }, replace);
+      queryClient.setQueriesData({ queryKey: queryKeys.sites.materials(updated.siteId) }, replace);
+      // 현장별 대기 수 갱신 (관리자 페이지 · 사용자 페이지)
+      queryClient.invalidateQueries({ queryKey: queryKeys.hq.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.my.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.materials(updated.siteId) });
     },
   });
 }

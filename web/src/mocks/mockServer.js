@@ -51,15 +51,26 @@ const isHqOf = (user, site) => user.role === 'hq' && !!site.companyId && user.hq
 // 본사 쪽 검토·자재 승인 권한: 본사 관리자만 (API 약속 2번 canReviewReports)
 const canHqReview = (user, site) => isHqOf(user, site) && user.canReviewReports;
 
-function visibleSites(user) {
-  if (user.role === 'system') return db.sites;
-  if (user.role === 'hq') return db.sites.filter((s) => isHqOf(user, s));
-  throw apiError(403, '본사 관계자만 볼 수 있어요.');
+// 본사 화면(/api/hq/*): 본사 관계자만 (서버 HqService 와 같음)
+function hqSites(user) {
+  if (user.role !== 'hq') throw apiError(403, '본사 관계자만 볼 수 있어요.');
+  return db.sites.filter((s) => isHqOf(user, s));
 }
 
+// 내가 참여한 현장 (현장 관리자 · 작업자)
+const isMember = (user, site) => site.ownerId === user.id || site.memberIds.includes(user.id);
+const memberSites = (user) => db.sites.filter((s) => isMember(user, s));
+
+// 현장 상세·보고 조회: 참여자 또는 연결된 본사
 function findVisibleSite(user, siteId) {
-  const site = visibleSites(user).find((s) => s.id === siteId);
-  if (!site) throw apiError(404, '현장을 찾을 수 없습니다.');
+  const site = db.sites.find((s) => s.id === siteId);
+  if (!site || !(isMember(user, site) || isHqOf(user, site))) throw apiError(404, '현장을 찾을 수 없습니다.');
+  return site;
+}
+
+function findMemberSite(user, siteId) {
+  const site = db.sites.find((s) => s.id === siteId);
+  if (!site || !isMember(user, site)) throw apiError(403, '이 현장에 참여한 사람만 보고할 수 있어요.');
   return site;
 }
 
@@ -72,7 +83,7 @@ function withPermissions(user, row) {
   const site = siteById(row.siteId);
   const canReview =
     row.review.status === 'pending' && row.authorId !== user.id && (site.ownerId === user.id || canHqReview(user, site));
-  return { ...row, siteName: site.name, canEdit: false, canDelete: false, canReview };
+  return { ...row, siteName: site.name, canEdit: row.authorId === user.id, canDelete: false, canReview };
 }
 
 // 자동 계산 현장의 공정별 현재 진행률 = 그 공정의 가장 최근 보고 값
@@ -190,7 +201,7 @@ export const mockServer = {
       return {
         name: company?.name ?? 'Build Up',
         code: company?.code ?? '',
-        siteCount: visibleSites(user).length,
+        siteCount: hqSites(user).length,
         staff: db.users.filter((u) => company && u.hqCompanyId === company.id).map((u) => u.name),
       };
     }),
@@ -198,13 +209,19 @@ export const mockServer = {
   getHqSites: () =>
     respond(() => {
       const user = currentUser();
-      return visibleSites(user).map((s) => summary(user, s));
+      return hqSites(user).map((s) => summary(user, s));
+    }),
+
+  getMySites: () =>
+    respond(() => {
+      const user = currentUser();
+      return memberSites(user).map((s) => summary(user, s));
     }),
 
   getHqReportPage: (cursor, size) =>
     respond(() => {
       const user = currentUser();
-      const ids = new Set(visibleSites(user).map((s) => s.id));
+      const ids = new Set(hqSites(user).map((s) => s.id));
       const list = db.reports
         .filter((r) => ids.has(r.siteId))
         .sort(byNewest)
@@ -268,7 +285,7 @@ export const mockServer = {
   getHqMaterials: () =>
     respond(() => {
       const user = currentUser();
-      const ids = new Set(visibleSites(user).map((s) => s.id));
+      const ids = new Set(hqSites(user).map((s) => s.id));
       return db.materials
         .filter((m) => ids.has(m.siteId))
         .sort(byNewest)
@@ -296,6 +313,104 @@ export const mockServer = {
       m.rejectReason = status === 'rejected' ? why : null;
       m.timeline.push({ status, by: user.name, byHq: user.role === 'hq', at });
       return withMaterialPermissions(user, m);
+    }),
+
+  getSiteMaterials: (siteId) =>
+    respond(() => {
+      const user = currentUser();
+      findVisibleSite(user, siteId);
+      return db.materials
+        .filter((m) => m.siteId === siteId)
+        .sort(byNewest)
+        .map((m) => withMaterialPermissions(user, m));
+    }),
+
+  // 실서버: POST /sites/{id}/reports (multipart). 더미는 사진을 브라우저 안 주소(blob:)로만 보관한다
+  createReport: async (siteId, input) => {
+    await delay(600);
+    const user = currentUser();
+    const site = findMemberSite(user, siteId);
+    let work = String(input.work ?? '').trim();
+    if (work.length > 100) throw apiError(400, '진행한 작업은 100자까지 쓸 수 있어요.');
+    const current = reportsOf(site.id)[0]?.to ?? 0;
+    let processFields = { processKey: 'work', processName: work.slice(0, 30), processFrom: null, processTo: null };
+    let to;
+    if (site.progressMode === 'auto') {
+      const procs = processesOf(site);
+      const p = procs.find((x) => x.key === input.processKey);
+      if (!p) throw apiError(400, '보고할 공정을 골라 주세요.');
+      const pTo = Number(input.processTo);
+      if (!Number.isFinite(pTo) || pTo < p.progress || pTo > 100) {
+        throw apiError(400, `'${p.name}' 진행률은 지금 값(${p.progress}%) 이상, 100% 이하여야 해요.`);
+      }
+      if (!work) work = `${p.name} 작업`;
+      const after = procs.map((x) => (x.key === p.key ? { ...x, progress: pTo } : x));
+      to = Math.max(current, Math.round(after.reduce((sum, x) => sum + (x.weight * x.progress) / 100, 0) * 10) / 10);
+      processFields = { processKey: p.key, processName: p.name, processFrom: p.progress, processTo: Math.round(pTo * 10) / 10 };
+    } else {
+      if (!work) throw apiError(400, '진행한 작업을 입력해 주세요.');
+      to = Number(input.to);
+      if (!Number.isFinite(to) || to < current || to > 100) {
+        throw apiError(400, `진행률은 지금 진행률(${current}%) 이상, 100% 이하여야 해요.`);
+      }
+      to = Math.round(to * 10) / 10;
+    }
+    if ((input.photos?.length ?? 0) > 10) throw apiError(400, '사진은 최대 10장까지 올릴 수 있어요.');
+    if ((input.files?.length ?? 0) > 5) throw apiError(400, '파일은 최대 5개까지 첨부할 수 있어요.');
+
+    const now = new Date();
+    const photos = (input.photos ?? []).map((f) => ({
+      url: URL.createObjectURL(f),
+      // 실서버는 사진 EXIF에서 촬영 시각·GPS를 읽는다. 더미는 파일 수정 시각으로 대신한다
+      takenAt: f.lastModified ? new Date(f.lastModified).toISOString() : null,
+      latitude: null,
+      longitude: null,
+    }));
+    const checks = [];
+    if (photos.some((p) => p.takenAt && now - new Date(p.takenAt) > 86_400_000)) {
+      checks.push({ type: 'old_photo', message: '하루 이상 지난 사진이 포함되어 있어요' });
+    }
+    if (!input.location) checks.push({ type: 'no_location', message: '제출 위치 정보가 없어요' });
+
+    const owner = site.ownerId === user.id;
+    const row = {
+      id: `${site.id}-new${Date.now()}`,
+      siteId: site.id,
+      ...processFields,
+      work,
+      from: current,
+      to,
+      photoUris: photos.map((p) => p.url),
+      photos,
+      files: (input.files ?? []).map((f) => ({ name: f.name, url: URL.createObjectURL(f), size: f.size })),
+      memo: String(input.memo ?? '').trim(),
+      workLog: input.workLog ?? { weather: null, workers: null, equipment: '' },
+      author: user.name,
+      authorId: user.id,
+      createdAt: now.toISOString(),
+      location: input.location ?? null,
+      // 본사 없는 현장의 총관리자 보고는 바로 승인 (서버 규칙)
+      review:
+        owner && !site.companyId
+          ? { status: 'approved', comment: null, reviewer: null, reviewedAt: null }
+          : { status: 'pending', comment: null, reviewer: null, reviewedAt: null },
+      checks,
+    };
+    db.reports.push(row);
+    return clone(withPermissions(user, row));
+  },
+
+  // 작성자: 메모 수정 → 보완 요청 상태면 다시 검토 대기
+  updateMemo: (reportId, memo) =>
+    respond(() => {
+      const user = currentUser();
+      const row = db.reports.find((r) => r.id === reportId);
+      if (!row) throw apiError(404, '보고를 찾을 수 없습니다.');
+      if (row.authorId !== user.id) throw apiError(403, '작성자만 수정할 수 있습니다.');
+      row.memo = String(memo ?? '').trim();
+      row.updatedAt = new Date().toISOString();
+      if (row.review.status === 'revision') row.review = { ...row.review, status: 'pending' };
+      return withPermissions(user, row);
     }),
 
   // 실서버: POST /sites/{id}/worklog/link?from&to → { url }

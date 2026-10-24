@@ -7,9 +7,14 @@ export const queryKeys = {
     reports: () => ['hq', 'reports'],
     materials: () => ['hq', 'materials'],
   },
+  my: {
+    all: ['my'],
+    sites: () => ['my', 'sites'],
+  },
   sites: {
     all: ['sites'],
     detail: (siteId) => ['sites', siteId, 'detail'],
     reports: (siteId) => ['sites', siteId, 'reports'],
+    materials: (siteId) => ['sites', siteId, 'materials'],
   },
 };

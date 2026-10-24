@@ -51,7 +51,7 @@ export default function SitesPage() {
                   return (
                     <tr
                       key={s.id}
-                      onClick={() => navigate(`/sites/${s.id}`)}
+                      onClick={() => navigate(`/admin/sites/${s.id}`)}
                       className="cursor-pointer border-b border-line last:border-b-0 hover:bg-gray-50"
                     >
                       <td className="px-5 py-3">

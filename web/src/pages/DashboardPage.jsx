@@ -132,7 +132,7 @@ function SiteOverview({ site, onSelectReport, selectedReportId }) {
           title={`${site.name} ${isAuto ? '공정 현황' : '진척 현황'}`}
           subtitle={`${site.workType ?? '공사 종류 미입력'} · ${site.address} · 현장 관리자 ${site.ownerName} · ${site.memberCount}명 · 진행률 ${PROGRESS_MODE_LABEL[detail?.progressMode ?? 'manual']}`}
           right={
-            <Link to={`/sites/${site.id}`} className="flex items-center gap-1 font-semibold text-gray-700 hover:text-gray-900">
+            <Link to={`/admin/sites/${site.id}`} className="flex items-center gap-1 font-semibold text-gray-700 hover:text-gray-900">
               현장 상세 <Icon name="arrowRight" size={14} />
             </Link>
           }
@@ -184,7 +184,7 @@ function SiteOverview({ site, onSelectReport, selectedReportId }) {
           title="사진 타임라인"
           subtitle="촬영일 기준 · 최근 4일"
           right={
-            <Link to={`/photos?site=${site.id}`} className="font-semibold text-gray-700 hover:text-gray-900">
+            <Link to={`/admin/photos?site=${site.id}`} className="font-semibold text-gray-700 hover:text-gray-900">
               전체 보기
             </Link>
           }

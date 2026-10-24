@@ -1,12 +1,14 @@
 // 더미 데이터 원본. 모양은 app/types.ts · docs/API_약속.md 와 동일하게 유지한다.
 // 날짜는 '지금' 기준 상대값으로 만들어서 언제 열어도 '오늘 보고'가 보이게 한다.
 
-export const DEMO_PASSWORD = 'buildup1234';
+// 실서버 데모 계정(api/server DemoDataSeeder)과 같은 이메일·비밀번호
+export const DEMO_PASSWORD = '1234';
 
 export const DEMO_ACCOUNTS = [
-  { email: 'hq@buildup.dev', label: '본사 관리자 (승인 가능)' },
-  { email: 'hq2@buildup.dev', label: '본사 직원 (조회만 가능)' },
-  { email: 'site@buildup.dev', label: '현장 관리자 (웹 접근 차단 확인용)' },
+  { email: 'hq@buildup.kr', label: '본사 관리자 → 관리자 페이지' },
+  { email: 'admin@buildup.kr', label: '현장 관리자 → 사용자 페이지 (자기 현장 승인 가능)' },
+  { email: 'worker@buildup.kr', label: '작업자 → 사용자 페이지 (보고 작성)' },
+  { email: 'hq2@buildup.kr', label: '본사 직원 (조회만 · 더미 전용)' },
 ];
 
 // ───────── 결정적 난수 (새로고침해도 같은 데이터) ─────────
@@ -40,14 +42,15 @@ const ymd = (d) =>
 // ───────── 고정 데이터 ─────────
 // 서버 AuthUserResponse 와 같은 칸 (hqCompanyId는 더미 내부용)
 const USERS = [
-  { id: 'u-hq', name: '정본사', email: 'hq@buildup.dev', phone: '010-1000-0001', role: 'hq', company: '한빛건설 본사', companyCode: '250901', hqName: null, hqRole: 'manager', canReviewReports: true, hqCompanyId: 'c-1' },
-  { id: 'u-hq2', name: '오직원', email: 'hq2@buildup.dev', phone: '010-1000-0002', role: 'hq', company: '한빛건설 본사', companyCode: '250901', hqName: null, hqRole: 'member', canReviewReports: false, hqCompanyId: 'c-1' },
-  { id: 'u-sys', name: '시스템 관리자', email: 'admin@buildup.dev', phone: '010-1000-0000', role: 'system', company: 'Build Up', companyCode: null, hqName: null, hqRole: null, canReviewReports: false },
-  { id: 'u-admin', name: '이영호', email: 'site@buildup.dev', phone: '010-2000-0001', role: 'admin', company: '영호종합건설', companyCode: null, hqName: '한빛건설 본사', hqRole: null, canReviewReports: false },
-  { id: 'u-w1', name: '김현장', email: 'kim@buildup.dev', phone: '010-3000-0001', role: 'worker', hqRole: null, canReviewReports: false },
-  { id: 'u-w2', name: '박철근', email: 'park@buildup.dev', phone: '010-3000-0002', role: 'worker', hqRole: null, canReviewReports: false },
-  { id: 'u-w3', name: '최전기', email: 'choi@buildup.dev', phone: '010-3000-0003', role: 'worker', hqRole: null, canReviewReports: false },
-  { id: 'u-w4', name: '한설비', email: 'han@buildup.dev', phone: '010-3000-0004', role: 'worker', hqRole: null, canReviewReports: false },
+  { id: 'u-hq', name: '정본사', email: 'hq@buildup.kr', phone: '010-1000-0001', role: 'hq', company: '한빛건설 본사', companyCode: '250901', hqName: null, hqRole: 'manager', canReviewReports: true, hqCompanyId: 'c-1' },
+  { id: 'u-hq2', name: '오직원', email: 'hq2@buildup.kr', phone: '010-1000-0002', role: 'hq', company: '한빛건설 본사', companyCode: '250901', hqName: null, hqRole: 'member', canReviewReports: false, hqCompanyId: 'c-1' },
+  { id: 'u-sys', name: '시스템 관리자', email: 'sys@buildup.kr', phone: '010-1000-0000', role: 'system', company: 'Build Up', companyCode: null, hqName: null, hqRole: null, canReviewReports: false },
+  { id: 'u-admin', name: '이영호', email: 'admin@buildup.kr', phone: '010-1234-5678', role: 'admin', company: '한빛건설', companyCode: null, hqName: '한빛건설 본사', hqRole: null, canReviewReports: false },
+  { id: 'u-park', name: '박철근', email: 'park@buildup.kr', phone: '010-2222-3333', role: 'admin', company: '박철근 인력사무소', companyCode: null, hqName: null, hqRole: null, canReviewReports: false },
+  { id: 'u-w1', name: '김현장', email: 'worker@buildup.kr', phone: '010-3000-0001', role: 'worker', hqRole: null, canReviewReports: false },
+  { id: 'u-w2', name: '오철근', email: 'oh@buildup.kr', phone: '010-3000-0002', role: 'worker', hqRole: null, canReviewReports: false },
+  { id: 'u-w3', name: '최전기', email: 'choi@buildup.kr', phone: '010-3000-0003', role: 'worker', hqRole: null, canReviewReports: false },
+  { id: 'u-w4', name: '한설비', email: 'han@buildup.kr', phone: '010-3000-0004', role: 'worker', hqRole: null, canReviewReports: false },
 ];
 
 const COMPANIES = [{ id: 'c-1', name: '한빛건설 본사', code: '250901' }];
@@ -161,7 +164,9 @@ const SITE_PLANS = [
     address: '강원 원주시 단구로 88',
     lat: 37.3285,
     lng: 127.9468,
-    memberIds: ['u-admin', 'u-w4'],
+    ownerId: 'u-park', // 본사 없이 운영하는 현장 (총관리자 = 최고 책임자)
+    companyId: null,
+    memberIds: ['u-park', 'u-w1', 'u-w4'],
     progressMode: 'manual',
     startProgress: 0,
     finalProgress: 55,
@@ -244,7 +249,7 @@ function planSteps(plan, rand) {
 }
 
 function makeReports(plan, now, rand) {
-  const authors = plan.memberIds.filter((id) => id !== 'u-admin');
+  const authors = plan.memberIds.filter((id) => id !== (plan.ownerId ?? 'u-admin'));
   return planSteps(plan, rand).map((step) => {
     const { i } = step;
     const newestIndex = plan.count - 1 - i; // 0 = 가장 최근
@@ -290,6 +295,7 @@ function makeReports(plan, now, rand) {
       checks.push({ type: 'no_location', message: '제출 위치와 사진 위치 정보가 없어요.' });
     }
 
+    const reviewer = plan.companyId === null ? '박철근' : '정본사';
     let review;
     if (newestIndex < plan.pendingLast) {
       review = { status: 'pending', comment: null, reviewer: null, reviewedAt: null };
@@ -297,14 +303,14 @@ function makeReports(plan, now, rand) {
       review = {
         status: 'revision',
         comment: '타일 줄눈 상태가 보이는 근접 사진을 추가로 올려주세요.',
-        reviewer: '정본사',
+        reviewer,
         reviewedAt: iso(new Date(created.getTime() + 3 * 60 * MIN)),
       };
     } else {
       review = {
         status: 'approved',
         comment: null,
-        reviewer: '정본사',
+        reviewer,
         reviewedAt: iso(new Date(created.getTime() + (1 + Math.floor(rand() * 5)) * 60 * MIN)),
       };
     }
@@ -353,8 +359,8 @@ function makeMaterials(now) {
         { name: '결속선', quantity: 20, unit: '롤' },
       ],
       neededBy: needBy(2), urgent: true, note: '5층 슬래브 배근용. 금요일 오전 반입 필요합니다.',
-      status: 'requested', rejectReason: null, author: '박철근', authorId: 'u-w2', createdAt: t(0, 9),
-      timeline: [ev('requested', '박철근', false, t(0, 9))],
+      status: 'requested', rejectReason: null, author: '오철근', authorId: 'u-w2', createdAt: t(0, 9),
+      timeline: [ev('requested', '오철근', false, t(0, 9))],
     },
     {
       id: 'm-2', siteId: 's-2', processKey: null, processName: null,
@@ -388,8 +394,8 @@ function makeMaterials(now) {
       id: 'm-5', siteId: 's-4', processKey: 'interior', processName: '내장 마감',
       items: [{ name: '실크 벽지', quantity: 120, unit: '롤' }],
       neededBy: needBy(-1), urgent: false, note: '색상 A-203 동일 로트로 부탁드립니다.',
-      status: 'rejected', rejectReason: '수량을 다시 확인해 주세요', author: '박철근', authorId: 'u-w2', createdAt: t(3, 11),
-      timeline: [ev('requested', '박철근', false, t(3, 11)), ev('rejected', '정본사', true, t(3, 16))],
+      status: 'rejected', rejectReason: '수량을 다시 확인해 주세요', author: '오철근', authorId: 'u-w2', createdAt: t(3, 11),
+      timeline: [ev('requested', '오철근', false, t(3, 11)), ev('rejected', '정본사', true, t(3, 16))],
     },
     {
       id: 'm-6', siteId: 's-5', processKey: null, processName: null,
@@ -412,9 +418,9 @@ export function createSeed(now = new Date()) {
     name: p.name,
     address: p.address,
     workType: p.workType,
-    ownerId: 'u-admin',
+    ownerId: p.ownerId ?? 'u-admin',
     code: String(100000 + Math.floor(rand() * 899999)),
-    companyId: 'c-1',
+    companyId: p.companyId === undefined ? 'c-1' : p.companyId,
     memberIds: p.memberIds,
     latitude: p.lat,
     longitude: p.lng,

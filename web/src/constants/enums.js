@@ -22,8 +22,25 @@ export const HQ_ROLE_LABEL = Object.freeze({
   member: '본사 직원',
 });
 
-// 웹 대시보드 로그인 조건 (API 약속 2번: role === 'hq', 시스템 관리자 포함)
-export const WEB_ALLOWED_ROLES = [USER_ROLE.HQ, USER_ROLE.SYSTEM];
+// 모든 계정이 웹에 로그인하고, 계정 종류에 따라 다른 페이지로 간다
+//   본사 관계자 → 관리자 페이지 /admin
+//   현장 관리자 · 작업자 → 사용자 페이지 /my
+//   시스템 관리자 → /system (서버 /api/system/* 전용, 웹 화면은 아직 안내만)
+export const ADMIN_ROLES = [USER_ROLE.HQ];
+export const USER_ROLES = [USER_ROLE.ADMIN, USER_ROLE.WORKER];
+
+export function homePathFor(role) {
+  if (ADMIN_ROLES.includes(role)) return '/admin';
+  if (role === USER_ROLE.SYSTEM) return '/system';
+  return '/my';
+}
+
+// 보고 작성 제한 (서버 ReportService 와 동일)
+export const REPORT_LIMITS = Object.freeze({ WORK_MAX: 100, PHOTOS_MAX: 10, FILES_MAX: 5 });
+// 첨부 가능한 문서 (서버 FileStorage.checkDocument)
+export const REPORT_DOC_ACCEPT = '.pdf,.xls,.xlsx,.csv,.hwp,.hwpx,.doc,.docx,.ppt,.pptx,.txt,.zip';
+// 사진 형식 (서버 FileStorage.PHOTO_TYPES)
+export const REPORT_PHOTO_ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,image/jpeg,image/png,image/webp,image/heic';
 
 // 보고 검토 상태 (API 약속 1번 / DB: PENDING·APPROVED·REVISION)
 export const REVIEW_STATUS = Object.freeze({

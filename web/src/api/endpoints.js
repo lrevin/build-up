@@ -14,12 +14,16 @@ export const ENDPOINTS = {
     MATERIALS: '/hq/materials', // MaterialRequest[]
   },
   SITES: {
+    MINE: '/sites', // GET → SiteSummary[] (내가 참여한 현장)
     DETAIL: (siteId) => `/sites/${siteId}`, // Site
+    REPORTS: (siteId) => `/sites/${siteId}/reports`, // POST multipart → Report (보고 제출)
+    MATERIALS: (siteId) => `/sites/${siteId}/materials`, // GET → MaterialRequest[]
     REPORT_PAGE: (siteId) => `/sites/${siteId}/reports/page`, // ReportPage  ?cursor=&size=
     WORKLOG_LINK: (siteId) => `/sites/${siteId}/worklog/link`, // POST ?from=&to= → { url } (10분 유효)
   },
   REPORTS: {
     REVIEW: (reportId) => `/reports/${reportId}/review`, // PATCH { status, comment } → Report
+    UPDATE: (reportId) => `/reports/${reportId}`, // PATCH { memo } → Report (보완 요청 받은 보고는 다시 검토 대기)
   },
   MATERIALS: {
     STATUS: (requestId) => `/materials/${requestId}/status`, // PATCH { status, reason } → MaterialRequest

@@ -18,6 +18,9 @@ const PATHS = {
   arrowRight: 'M5 12h14M13 6l6 6-6 6',
   box: 'M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8',
   download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
+  plus: 'M12 5v14M5 12h14',
+  upload: 'M12 20V9M7 14l5-5 5 5M5 4h14',
+  trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
 };
 
 export default function Icon({ name, size = 18, className = '', strokeWidth = 1.8 }) {

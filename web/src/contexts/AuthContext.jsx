@@ -4,18 +4,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/authApi';
 import { AUTH_LOGOUT_EVENT } from '../api/axiosInstance';
 import { tokenStorage } from '../services/tokenStorage';
-import { WEB_ALLOWED_ROLES } from '../constants/enums';
 
-// JWT의 role claim은 users.role('USER'|'SYSTEM_ADMIN')이라 본사 여부를 알 수 없다.
-// 그래서 권한은 토큰이 아니라 /auth/me 응답(User.role)으로 판단한다.
+// 모든 계정이 로그인할 수 있고, 어느 페이지로 갈지는 /auth/me 의 role 로 정한다 (constants/enums homePathFor).
+// 화면 판단은 토큰이 아니라 /auth/me 응답으로 한다 (API 약속 2번).
 const AuthContext = createContext(null);
-
-const forbiddenRoleError = {
-  isNormalized: true,
-  status: 403,
-  code: 'FORBIDDEN_ROLE',
-  message: '본사 관계자 계정만 웹 대시보드에 접속할 수 있어요. 현장 관리자는 모바일 앱을 이용해 주세요.',
-};
 
 export function AuthProvider({ children }) {
   const navigate = useNavigate();
@@ -55,7 +47,7 @@ export function AuthProvider({ children }) {
     }
     authApi
       .me()
-      .then((me) => (WEB_ALLOWED_ROLES.includes(me.role) ? setUser(me) : clearSession()))
+      .then(setUser)
       .catch(() => clearSession())
       .finally(() => setRestoring(false));
   }, [clearSession]);
@@ -65,14 +57,10 @@ export function AuthProvider({ children }) {
       const session = await authApi.login(credentials);
       tokenStorage.setTokens(session);
       const me = session.user ?? (await authApi.me());
-      if (!WEB_ALLOWED_ROLES.includes(me.role)) {
-        authApi.logout(session.refreshToken);
-        clearSession();
-        throw forbiddenRoleError; // UX 차단일 뿐, 서버 권한 검사는 별도로 필수
-      }
       setUser(me);
+      return me;
     },
-    [clearSession],
+    [],
   );
 
   const value = useMemo(

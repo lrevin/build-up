@@ -40,7 +40,7 @@ export default function SiteDetailPage() {
 
   return (
     <>
-      <Link to="/sites" className="mb-2 inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-800">
+      <Link to="/admin/sites" className="mb-2 inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-800">
         <Icon name="left" size={14} /> 현장 목록
       </Link>
       <PageHeader
