@@ -1,8 +1,10 @@
 import { useAuth } from '../contexts/AuthContext';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 // 시스템 관리자: 서버에는 /api/system/* (통계·계정 관리)가 있지만 웹 화면은 아직 없다
 export default function SystemPage() {
   const { user, logout } = useAuth();
+  useDocumentTitle('시스템 관리자');
   return (
     <div className="flex min-h-screen items-center justify-center bg-ink-950 px-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center">

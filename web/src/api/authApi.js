@@ -3,13 +3,11 @@ import { ENDPOINTS } from './endpoints';
 import { USE_DUMMY } from '../config';
 import { mockServer } from '../mocks/mockServer';
 
-// ⚠️ 로그인 응답 형식이 레포 안에서 두 가지로 갈린다 (팀 확인 중):
-//   - 백엔드 AuthService → TokenResponse(accessToken, refreshToken, 만료시각)
-//   - 모바일 api/buildup.ts → { user, token }
-// 확정 전까지 이 함수에서 둘 다 받아들인다. 확정되면 한쪽만 남긴다.
+// 로그인 응답 (API 약속 3번 / 서버 LoginResponse):
+//   { user, accessToken, refreshToken, tokenType, accessTokenExpiresAt, refreshTokenExpiresAt }
 const toSession = (data) => ({
-  accessToken: data.accessToken ?? data.token,
-  refreshToken: data.refreshToken ?? null,
+  accessToken: data.accessToken,
+  refreshToken: data.refreshToken,
   user: data.user ?? null, // 없으면 /auth/me 로 조회
 });
 

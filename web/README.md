@@ -1,6 +1,6 @@
 # web
 
-상부·관리자가 보는 **웹 화면** 코드만 올리는 폴더입니다. (본사 관리자 대시보드, 담당: 강건우)
+Build Up **웹 화면** 코드 폴더입니다. 모든 계정이 쓰며, 본사는 관리자 페이지·현장 관리자/작업자는 사용자 페이지로 갑니다. (담당: 강건우)
 
 React 19 · Vite · React Router · TanStack Query · Axios · Tailwind CSS v4
 

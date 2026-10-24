@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { USE_DUMMY } from '../config';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../mocks/seed';
 import { homePathFor } from '../constants/enums';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function LoginPage() {
   const { login, isAuthenticated, restoring, user } = useAuth();
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState(USE_DUMMY ? DEMO_PASSWORD : '');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  useDocumentTitle('로그인');
 
   if (!restoring && isAuthenticated) return <Navigate to={homePathFor(user?.role)} replace />;
 

@@ -3,6 +3,7 @@ import Icon from '../components/common/Icon';
 import { useAuth } from '../contexts/AuthContext';
 import { HQ_ROLE_LABEL, USER_ROLE_LABEL } from '../constants/enums';
 import { USE_DUMMY } from '../config';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 function Logo({ caption }) {
   return (
@@ -24,6 +25,7 @@ function Logo({ caption }) {
 // nav: [{ to, label, icon, end?, badge? }], badges: { [key]: number }, action: 메뉴 위 주요 버튼
 export default function AppShell({ caption, nav, badges = {}, action }) {
   const { user, logout } = useAuth();
+  useDocumentTitle(caption);
 
   return (
     // 바깥 상자는 내용만큼 늘어나야(min-h-screen) sticky 사이드바가 스크롤 끝까지 고정된다

@@ -35,9 +35,9 @@ const forceLogout = () => {
 const refreshAccessToken = async () => {
   const refreshToken = tokenStorage.getRefreshToken();
   if (!refreshToken) throw new Error('NO_REFRESH_TOKEN');
-  // TODO(백엔드 확인): RefreshRequest 필드명
+  // API 약속 3번: 요청 { refreshToken }, 응답은 로그인과 같은 모양 (refreshToken 은 그대로)
   const { data } = await bare.post(ENDPOINTS.AUTH.REFRESH, { refreshToken });
-  tokenStorage.setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+  tokenStorage.setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken ?? refreshToken });
   return data.accessToken;
 };
 
