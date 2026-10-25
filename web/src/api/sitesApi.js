@@ -8,6 +8,14 @@ export const sitesApi = {
   // 내가 참여한 현장 (현장 관리자 · 작업자)
   getMySites: () => (USE_DUMMY ? mockServer.getMySites() : http.get(ENDPOINTS.SITES.MINE).then((r) => r.data)),
 
+  // 참여 전 미리보기 (잘못된 현장에 들어가지 않게 이름·관리자 확인)
+  previewSite: (code) =>
+    USE_DUMMY ? mockServer.previewSite(code) : http.get(ENDPOINTS.SITES.PREVIEW(code)).then((r) => r.data),
+
+  // 참여 코드(6자리)로 현장 참여 (현장 관리자 · 작업자. 본사 관계자는 403)
+  joinSite: (code) =>
+    USE_DUMMY ? mockServer.joinSite(code) : http.post(ENDPOINTS.SITES.JOIN, { code }).then((r) => r.data),
+
   getSite: (siteId) =>
     USE_DUMMY ? mockServer.getSite(siteId) : http.get(ENDPOINTS.SITES.DETAIL(siteId)).then((r) => r.data),
 

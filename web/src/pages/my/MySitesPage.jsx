@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import JoinSitePanel from '../../components/domain/JoinSitePanel';
 import PageHeader from '../../components/common/PageHeader';
 import { Card } from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
@@ -15,13 +17,30 @@ export default function MySitesPage() {
   const { user } = useAuth();
   const { data: sites = [], isPending, isError, error, refetch } = useMySites();
   const ownerCount = sites.filter((s) => s.isOwner).length;
+  const [joinOpen, setJoinOpen] = useState(false);
+  const empty = !isPending && !isError && sites.length === 0;
 
   return (
     <>
       <PageHeader
         title={`${user?.name ?? ''}님의 현장`}
         subtitle={`${formatFullDate()} · 참여 현장 ${sites.length}곳${ownerCount ? ` (총관리 ${ownerCount}곳)` : ''}`}
+        right={
+          !empty &&
+          !joinOpen && (
+            <button
+              type="button"
+              onClick={() => setJoinOpen(true)}
+              className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-3 py-2 text-[13px] font-bold text-gray-800 hover:bg-gray-50"
+            >
+              <Icon name="plus" size={14} strokeWidth={2.4} /> 참여 코드 입력
+            </button>
+          )
+        }
       />
+
+      {/* 현장이 없으면 바로 코드 입력부터 보여 준다 (가입 직후 첫 화면) */}
+      {(empty || joinOpen) && <JoinSitePanel onClose={empty ? undefined : () => setJoinOpen(false)} />}
 
       {isPending ? (
         <LoadingBlock />
@@ -33,8 +52,8 @@ export default function MySitesPage() {
             title="참여한 현장이 없어요."
             description={
               user?.role === USER_ROLE.ADMIN
-                ? '현장 만들기는 모바일 앱에서 할 수 있어요.'
-                : '현장 관리자에게 받은 참여 코드를 모바일 앱에 입력하면 여기에 표시돼요.'
+                ? '받은 참여 코드가 있으면 위에 입력하세요. 새 현장 만들기는 모바일 앱에서 할 수 있어요.'
+                : '현장 관리자에게 받은 참여 코드를 위에 입력하면 여기에 표시돼요.'
             }
           />
         </Card>

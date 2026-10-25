@@ -3,6 +3,8 @@ import ProtectedRoute, { HomeRedirect } from './ProtectedRoute';
 import DashboardLayout from '../layouts/DashboardLayout';
 import UserLayout from '../layouts/UserLayout';
 import LoginPage from '../pages/LoginPage';
+import SignUpPage from '../pages/SignUpPage';
+import KakaoCallbackPage from '../pages/KakaoCallbackPage';
 import SystemPage from '../pages/SystemPage';
 import NotFoundPage from '../pages/NotFoundPage';
 // 관리자 페이지 (본사 관계자)
@@ -23,6 +25,8 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/oauth/kakao/callback" element={<KakaoCallbackPage />} />
       <Route
         path="/"
         element={

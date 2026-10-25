@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { USE_DUMMY } from '../config';
+import { KAKAO_LOGIN, USE_DUMMY } from '../config';
+import KakaoButton, { OrDivider } from '../components/domain/KakaoButton';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../mocks/seed';
 import { homePathFor } from '../constants/enums';
 import useDocumentTitle from '../hooks/useDocumentTitle';
@@ -86,7 +87,20 @@ export default function LoginPage() {
           >
             {submitting ? '로그인 중…' : '로그인'}
           </button>
+          {KAKAO_LOGIN && (
+            <>
+              <OrDivider />
+              <KakaoButton label="카카오 로그인" />
+            </>
+          )}
         </form>
+
+        <p className="mt-4 text-center text-[13px] text-ink-400">
+          처음이신가요?{' '}
+          <Link to="/signup" className="font-semibold text-white hover:underline">
+            회원가입
+          </Link>
+        </p>
 
         {USE_DUMMY && (
           <div className="mt-4 rounded-xl border border-ink-800 px-4 py-3 text-[12px] text-ink-400">
