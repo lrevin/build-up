@@ -33,6 +33,21 @@ const KINDS = {
     sentText: (v) => `${v.trim()}로 인증 코드를 보냈어요.`,
     doneText: '이메일 인증 완료',
   },
+  // 비밀번호 찾기: 가입한 이메일로 코드 → resetToken
+  password: {
+    label: '이메일',
+    hint: '가입한 이메일로 인증 코드를 보내 드려요.',
+    type: 'email',
+    autoComplete: 'email',
+    placeholder: 'name@example.com',
+    maxLength: 120,
+    valid: (v) => EMAIL_RE.test(v.trim()),
+    clean: (v) => v,
+    send: (v) => authApi.sendPasswordCode(v.trim()),
+    verify: (v, code) => authApi.verifyPasswordCode(v.trim(), code).then((r) => r.resetToken),
+    sentText: (v) => `${v.trim()}로 인증 코드를 보냈어요.`,
+    doneText: '이메일 인증 완료',
+  },
   phone: {
     label: '휴대폰 번호',
     hint: '[인증 받기]를 눌러 문자로 온 코드를 확인해 주세요.',

@@ -7,6 +7,7 @@ import { useMySites } from '../hooks/queries/useMyQueries';
 const NAV = [
   { to: '/my', label: '내 현장', icon: 'sites', end: true, badge: 'pending' },
   { to: '/my/reports', label: '보고 이력', icon: 'review' },
+  { to: '/my/account', label: '내 정보', icon: 'user' },
 ];
 
 export default function UserLayout() {

@@ -71,7 +71,7 @@ export default function DashboardPage() {
             // 막 가입한 본사: 연결된 현장이 아직 없음 → 본사 코드 공유 안내
             <EmptyState
               title="아직 연결된 현장이 없어요."
-              description={`현장 총관리자에게 본사 코드${hq?.code ? ` ${hq.code}` : ''}를 알려 주세요. 현장 관리자가 가입하거나 내 정보에서 이 코드를 입력하면 현장이 여기에 표시돼요.`}
+              description={`현장 관리자에게 본사 코드${hq?.code ? ` ${hq.code}` : ''}를 알려 주세요. 현장 관리자가 가입하거나 내 정보에서 이 코드를 입력하면 현장이 여기에 표시돼요.`}
             />
           ) : (
             <EmptyState title="검색 결과가 없어요." />

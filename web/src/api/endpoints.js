@@ -13,7 +13,11 @@ export const ENDPOINTS = {
     OAUTH_KAKAO: '/auth/oauth/kakao', // POST { code, redirectUri } → 로그인 응답 | { signupRequired, signupToken, provider, email, name, expiresInSeconds }
     REFRESH: '/auth/refresh', // POST { refreshToken } → 로그인과 같은 모양
     LOGOUT: '/auth/logout', // POST { refreshToken }
-    ME: '/auth/me', // GET → user
+    ME: '/auth/me', // GET → user  /  DELETE → { ok, deleteAt } 회원 탈퇴(7일 뒤 영구 삭제)
+    // 비밀번호 찾기 (API 약속 3번 "비밀번호 찾기"): 메일 코드 → resetToken → 새 비밀번호
+    PASSWORD_SEND: '/auth/password/send', // POST { email } → { expiresInSeconds, resendAfterSeconds }
+    PASSWORD_VERIFY: '/auth/password/verify', // POST { email, code } → { resetToken, expiresInSeconds }
+    PASSWORD_RESET: '/auth/password/reset', // POST { email, resetToken, password } → { ok }
   },
   HQ: {
     INFO: '/hq', // HqInfo

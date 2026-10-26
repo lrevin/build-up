@@ -7,6 +7,7 @@ import SignUpPage from '../pages/SignUpPage';
 import KakaoCallbackPage from '../pages/KakaoCallbackPage';
 import SystemPage from '../pages/SystemPage';
 import NotFoundPage from '../pages/NotFoundPage';
+import AccountPage from '../pages/AccountPage';
 // 관리자 페이지 (본사 관계자)
 import DashboardPage from '../pages/DashboardPage';
 import SitesPage from '../pages/SitesPage';
@@ -50,6 +51,7 @@ export default function AppRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="materials" element={<MaterialsPage />} />
         <Route path="photos" element={<PhotosPage />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
@@ -65,6 +67,7 @@ export default function AppRoutes() {
         <Route path="sites/:siteId" element={<MySiteDetailPage />} />
         <Route path="report/new" element={<ReportFormPage />} />
         <Route path="reports" element={<MyReportsPage />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 

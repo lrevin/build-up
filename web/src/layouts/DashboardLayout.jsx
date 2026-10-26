@@ -8,6 +8,7 @@ const NAV = [
   { to: '/admin/reports', label: '보고 승인', icon: 'review', badge: 'pending' },
   { to: '/admin/materials', label: '자재 요청', icon: 'box', badge: 'materials' },
   { to: '/admin/photos', label: '사진 기록', icon: 'photo' },
+  { to: '/admin/account', label: '내 정보', icon: 'user' },
 ];
 
 export default function DashboardLayout() {
