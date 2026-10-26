@@ -210,6 +210,38 @@ POST /api/auth/oauth/kakao
 - 앱: `{서버 주소}/api/auth/oauth/kakao/callback` (예: `http://localhost:8080/api/auth/oauth/kakao/callback`)
 - 웹: `{웹 주소}/oauth/kakao/callback`
 
+### 비밀번호 찾기 (이메일 코드 → 새 비밀번호)
+
+로그인 없이 쓸 수 있습니다. 가입 인증과 같은 순서예요.
+```http
+POST /api/auth/password/send    { "email": "kim@example.com" }
+→ { "expiresInSeconds": 300, "resendAfterSeconds": 60 }
+
+POST /api/auth/password/verify  { "email": "kim@example.com", "code": "123456" }
+→ { "resetToken": "rv_...", "expiresInSeconds": 1800 }
+
+POST /api/auth/password/reset   { "email": "kim@example.com", "resetToken": "rv_...", "password": "8자 이상" }
+→ { "ok": true }
+```
+- `send`는 가입하지 않은 이메일이어도 같은 응답을 줍니다(가입 여부를 알 수 없게). 코드는 가입한 계정에만 보냅니다.
+- 바꾸면 그 계정의 다른 기기 로그인(리프레시 토큰)은 모두 끊깁니다. 앱은 바꾼 뒤 로그아웃시켜요.
+- 카카오로만 가입한 계정도 이걸로 비밀번호를 만들면 이메일 로그인을 할 수 있어요.
+
+### 회원 탈퇴
+
+```http
+DELETE /api/auth/me      (Authorization 필요)
+→ { "ok": true, "deleteAt": "2026-11-02T14:38:00Z" }
+```
+- 바로 로그아웃(리프레시 토큰 폐기, 알림 기기 삭제). 화면에서는 **한 번 더 확인**을 받고 부르세요.
+- 탈퇴한 계정으로 로그인하면 `403` `{ "message": "탈퇴한 계정이에요. 탈퇴 7일 뒤 계정 정보가 모두 삭제돼요." }`
+- 같은 이메일로 가입(인증 코드 보내기)하면 `409` `{ "message": "탈퇴 처리 중인 이메일이에요. 탈퇴 7일 뒤에 다시 가입할 수 있어요." }`
+- **7일 뒤** 서버가 계정 정보를 영구 삭제합니다(1시간마다 확인).
+  - 내가 만든 현장은 보고·자재 요청·사진까지 모두 삭제
+  - 다른 사람 현장에 남긴 보고·자재 요청은 지우지 않고 작성자를 `탈퇴한 사용자`로 표시(이메일·휴대폰·비밀번호는 삭제)
+- 시스템 관리자, 발표용 예시 계정(`@buildup.kr`, 예시 데이터를 켠 서버)은 탈퇴할 수 없어요(`400`/`403`).
+- DB: `users.deleted_at`(V13)
+
 ---
 
 ## 4. 오류 응답
