@@ -92,14 +92,14 @@ export default function MySitesPage() {
                   {s.ownerName} · {s.memberCount}명{s.hqName ? ` · ${s.hqName}에 보고` : ' · 본사 없이 운영'}
                 </p>
 
-                {s.isOwner && (s.pendingReviews > 0 || s.pendingMaterials > 0) && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {s.pendingReviews > 0 && <Badge tone="brand">검토할 보고 {s.pendingReviews}</Badge>}
-                    {s.pendingMaterials > 0 && <Badge tone="brand">자재 요청 {s.pendingMaterials}</Badge>}
-                  </div>
-                )}
+                {/* 할 일 배지 줄: 없어도 자리는 남겨 카드마다 버튼 높이를 맞춘다 */}
+                <div className="mt-3 flex min-h-[22px] flex-wrap gap-1.5">
+                  {s.isOwner && s.pendingReviews > 0 && <Badge tone="brand">검토할 보고 {s.pendingReviews}</Badge>}
+                  {s.isOwner && s.pendingMaterials > 0 && <Badge tone="brand">자재 요청 {s.pendingMaterials}</Badge>}
+                </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2 pt-1">
+                {/* 버튼은 카드 맨 아래에 고정(같은 줄 카드는 높이가 같아 버튼 줄도 맞는다) */}
+                <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
                   <Link
                     to={`/my/sites/${s.id}`}
                     className="rounded-lg border border-line py-2 text-center text-[13px] font-bold text-gray-800 hover:bg-gray-50"
