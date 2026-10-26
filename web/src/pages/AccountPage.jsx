@@ -15,7 +15,7 @@ const inputCls =
   'w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink-900 disabled:bg-gray-50';
 
 export default function AccountPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const rows = [
     ['이름', user?.name],
     ['이메일', user?.email],
@@ -40,7 +40,7 @@ export default function AccountPage() {
             ))}
           </dl>
         </Card>
-        <PasswordCard email={user?.email ?? ''} />
+        <PasswordCard email={user?.email ?? ''} onDone={logout} />
       </div>
       <WithdrawCard />
     </>
@@ -48,8 +48,8 @@ export default function AccountPage() {
 }
 
 // 비밀번호 찾기: 이메일 인증 → 새 비밀번호. 바꾸면 모든 기기에서 로그아웃
-function PasswordCard({ email: initialEmail }) {
-  const { logout } = useAuth();
+// 내 정보(onDone = 로그아웃)와 로그인 화면의 "비밀번호를 잊으셨나요?"(onDone = 로그인 화면으로)에서 쓴다
+export function PasswordCard({ email: initialEmail = '', onDone }) {
   const toast = useToast();
   const [email, setEmail] = useState(initialEmail);
   const [token, setToken] = useState(null);
@@ -67,7 +67,7 @@ function PasswordCard({ email: initialEmail }) {
     try {
       await authApi.resetPassword({ email: email.trim(), resetToken: token, password: pw });
       toast.show('비밀번호를 바꿨어요. 새 비밀번호로 다시 로그인해 주세요.');
-      logout();
+      onDone();
     } catch (err) {
       setError(err?.message ?? '비밀번호를 바꾸지 못했어요.');
       setSaving(false);
