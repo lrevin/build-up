@@ -8,6 +8,7 @@ import KakaoCallbackPage from '../pages/KakaoCallbackPage';
 import SystemPage from '../pages/SystemPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import AccountPage from '../pages/AccountPage';
+import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 // 관리자 페이지 (본사 관계자)
 import DashboardPage from '../pages/DashboardPage';
 import SitesPage from '../pages/SitesPage';
@@ -27,6 +28,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/oauth/kakao/callback" element={<KakaoCallbackPage />} />
       <Route
         path="/"
