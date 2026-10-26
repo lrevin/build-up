@@ -12,6 +12,39 @@ import { useAuth } from '../../contexts/AuthContext';
 import { PROGRESS_MODE, STALE_REPORT_DAYS, USER_ROLE } from '../../constants/enums';
 import { daysSince, formatFullDate, formatPercent, formatRelative } from '../../services/format';
 
+// 현장 목록 위 요약 숫자 4개: 관리하는 현장이 있으면 처리할 일, 작업자는 보고 현황
+function Summary({ sites, ownerCount }) {
+  const sum = (key) => sites.reduce((n, s) => n + (s.isOwner ? (s[key] ?? 0) : 0), 0);
+  const avg = sites.reduce((n, s) => n + (s.overallProgress ?? 0), 0) / sites.length;
+  const reportedToday = sites.filter((s) => daysSince(s.lastReportedAt) === 0).length;
+  const stale = sites.filter((s) => daysSince(s.lastReportedAt) >= STALE_REPORT_DAYS).length;
+  const reviews = sum('pendingReviews');
+  const materials = sum('pendingMaterials');
+  const tiles = [
+    { label: '참여 현장', value: `${sites.length}곳`, sub: ownerCount ? `관리 ${ownerCount}곳` : '작업자로 참여' },
+    { label: '평균 진행률', value: formatPercent(avg), sub: '참여 현장 전체' },
+    ownerCount
+      ? { label: '검토할 보고', value: `${reviews}건`, sub: '내가 관리하는 현장', alert: reviews > 0 }
+      : { label: '오늘 보고', value: `${reportedToday}곳`, sub: '오늘 보고가 올라온 현장' },
+    ownerCount
+      ? { label: '승인 대기 자재', value: `${materials}건`, sub: '내가 관리하는 현장', alert: materials > 0 }
+      : { label: '보고 없는 현장', value: `${stale}곳`, sub: `${STALE_REPORT_DAYS}일 넘게 보고 없음`, alert: stale > 0 },
+  ];
+  return (
+    <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {tiles.map((t) => (
+        <Card key={t.label} className="px-5 py-4">
+          <p className="text-[12px] font-semibold text-gray-500">{t.label}</p>
+          <p className={`tabular mt-1 text-[24px] leading-tight font-extrabold tracking-tight ${t.alert ? 'text-[#8a6400]' : 'text-gray-900'}`}>
+            {t.value}
+          </p>
+          <p className="mt-0.5 text-[11px] text-gray-400">{t.sub}</p>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 // 사용자 페이지 첫 화면: 내가 참여한 현장
 export default function MySitesPage() {
   const { user } = useAuth();
@@ -24,7 +57,7 @@ export default function MySitesPage() {
     <>
       <PageHeader
         title={`${user?.name ?? ''}님의 현장`}
-        subtitle={`${formatFullDate()} · 참여 현장 ${sites.length}곳${ownerCount ? ` (총관리 ${ownerCount}곳)` : ''}`}
+        subtitle={`${formatFullDate()} · 참여 현장 ${sites.length}곳${ownerCount ? ` (관리 ${ownerCount}곳)` : ''}`}
         right={
           !empty &&
           !joinOpen && (
@@ -42,6 +75,8 @@ export default function MySitesPage() {
       {/* 현장이 없으면 바로 코드 입력부터 보여 준다 (가입 직후 첫 화면) */}
       {(empty || joinOpen) && <JoinSitePanel onClose={empty ? undefined : () => setJoinOpen(false)} />}
 
+      {!isPending && !isError && sites.length > 0 && <Summary sites={sites} ownerCount={ownerCount} />}
+
       {isPending ? (
         <LoadingBlock />
       ) : isError ? (
@@ -58,7 +93,7 @@ export default function MySitesPage() {
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {sites.map((s) => {
             const stale = daysSince(s.lastReportedAt) >= STALE_REPORT_DAYS;
             return (
@@ -76,7 +111,7 @@ export default function MySitesPage() {
                       {s.progressMode === PROGRESS_MODE.AUTO && ' · 공정 자동 계산'}
                     </p>
                   </div>
-                  <Badge tone={s.isOwner ? 'dark' : 'neutral'}>{s.isOwner ? '총관리자' : '참여 중'}</Badge>
+                  <Badge tone={s.isOwner ? 'dark' : 'neutral'}>{s.isOwner ? '관리자' : '참여 중'}</Badge>
                 </div>
 
                 <p className="tabular mt-3 text-[30px] leading-none font-extrabold tracking-tight text-gray-900">

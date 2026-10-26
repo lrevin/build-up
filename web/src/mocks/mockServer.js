@@ -87,7 +87,7 @@ const siteById = (id) => db.sites.find((s) => s.id === id);
 // 참여 코드로 현장 찾기 (서버 SiteService.preview / join)
 function siteByCode(user, code) {
   if (user.role === 'hq' || user.role === 'system') {
-    throw apiError(403, '본사 관계자는 현장 총관리자가 본사 코드로 연결한 현장을 볼 수 있어요.');
+    throw apiError(403, '본사 관계자는 현장 관리자가 본사 코드로 연결한 현장을 볼 수 있어요.');
   }
   if (!/^\d{6}$/.test(String(code))) throw apiError(400, '참여 코드는 6자리 숫자예요.');
   const site = db.sites.find((s) => s.code === String(code));
@@ -293,8 +293,11 @@ export const mockServer = {
   // 실서버는 메일·문자로 보냄. 더미는 보낼 곳이 없으므로 응답에 코드를 같이 넣어 화면에 보여 준다
   sendCode: (kind, raw) =>
     respond(() => {
-      const target = kind === 'email' ? String(raw ?? '').trim().toLowerCase() : String(raw ?? '').replace(/\D/g, '');
-      if (kind === 'email') {
+      const mail = kind === 'email' || kind === 'reset';
+      const target = mail ? String(raw ?? '').trim().toLowerCase() : String(raw ?? '').replace(/\D/g, '');
+      if (kind === 'reset') {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target)) throw apiError(400, '이메일 형식이 올바르지 않아요.');
+      } else if (kind === 'email') {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target)) throw apiError(400, '이메일 형식이 올바르지 않아요.');
         if (db.users.some((u) => u.email === target)) throw apiError(409, '이미 가입된 이메일입니다.');
       } else if (!/^01[016789]\d{7,8}$/.test(target)) {
@@ -311,7 +314,8 @@ export const mockServer = {
 
   verifyCode: (kind, raw, input) =>
     respond(() => {
-      const target = kind === 'email' ? String(raw ?? '').trim().toLowerCase() : String(raw ?? '').replace(/\D/g, '');
+      const mail = kind === 'email' || kind === 'reset';
+      const target = mail ? String(raw ?? '').trim().toLowerCase() : String(raw ?? '').replace(/\D/g, '');
       const row = auth.codes.get(`${kind}:${target}`);
       if (!row) throw apiError(400, '인증 코드를 먼저 받아 주세요.');
       if (row.tries >= 5) throw apiError(429, '인증 코드를 5번 틀렸어요. 코드를 다시 받아 주세요.');
@@ -322,11 +326,32 @@ export const mockServer = {
         throw apiError(400, `인증 코드가 맞지 않아요. (${5 - row.tries}번 남음)`);
       }
       auth.codes.delete(`${kind}:${target}`); // 다시 받기 60초 대기는 서버와 달리 생략(더미)
-      const token = `${kind === 'email' ? 'ev_' : 'pv_'}${Math.random().toString(36).slice(2)}`;
+      const prefix = { email: 'ev_', phone: 'pv_', reset: 'rv_' }[kind];
+      const token = `${prefix}${Math.random().toString(36).slice(2)}`;
       auth.verified.set(token, { kind, target, expiresAt: Date.now() + 1_800_000 });
+      if (kind === 'reset') return { resetToken: token, expiresInSeconds: 1800 };
       return kind === 'email'
         ? { emailVerificationToken: token, expiresInSeconds: 1800 }
         : { phoneVerificationToken: token, expiresInSeconds: 1800 };
+    }),
+
+  resetPassword: ({ email, resetToken, password }) =>
+    respond(() => {
+      const target = String(email ?? '').trim().toLowerCase();
+      const v = auth.verified.get(resetToken);
+      if (!v || v.kind !== 'reset' || v.target !== target) {
+        throw apiError(400, '인증 시간이 지났어요. 이메일 인증을 다시 해 주세요.');
+      }
+      if (String(password ?? '').length < 8) throw apiError(400, '비밀번호는 8자 이상이어야 해요.');
+      auth.verified.delete(resetToken);
+      const user = db.users.find((u) => u.email === target);
+      if (user) user.password = password;
+      return { ok: true };
+    }),
+
+  withdraw: () =>
+    respond(() => {
+      throw apiError(400, '더미 데이터 모드에서는 탈퇴할 수 없어요.');
     }),
 
   // 카카오: 더미는 카카오 서버 대신 고정된 카카오 사용자 한 명으로 흉내 낸다
@@ -450,7 +475,7 @@ export const mockServer = {
           row.review.status !== 'pending' ? 409 : 403,
           row.review.status !== 'pending'
             ? '이미 검토한 보고예요. 목록을 새로고침해 주세요.'
-            : '현장 총관리자나 본사 관리자만 검토할 수 있어요.',
+            : '현장 관리자나 본사 관리자만 검토할 수 있어요.',
         );
       }
       row.review = { status, comment: text || null, reviewer: user.name, reviewedAt: new Date().toISOString() };

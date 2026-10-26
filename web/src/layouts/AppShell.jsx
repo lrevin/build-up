@@ -85,7 +85,10 @@ export default function AppShell({ caption, nav, badges = {}, action }) {
       </aside>
 
       <main className="min-w-0 flex-1 px-7 py-6">
-        <Outlet />
+        {/* 아주 넓은 모니터에서 내용이 한쪽에 몰려 오른쪽이 비지 않게 가운데 최대 너비로 */}
+        <div className="mx-auto w-full max-w-[1280px]">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

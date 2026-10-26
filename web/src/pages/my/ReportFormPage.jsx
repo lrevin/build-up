@@ -569,7 +569,7 @@ export default function ReportFormPage() {
               {create.isPending ? '제출 중…' : '보고 제출'}
             </button>
             <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
-              제출하면 현장 총관리자와 본사가 검토해요. 본사 없이 운영하는 현장의 총관리자가 올린 보고는 바로 승인돼요.
+              제출하면 현장 관리자와 본사가 검토해요. 본사 없이 운영하는 현장의 관리자가 올린 보고는 바로 승인돼요.
             </p>
           </Card>
         </aside>

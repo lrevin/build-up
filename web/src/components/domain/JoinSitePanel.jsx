@@ -91,7 +91,7 @@ export default function JoinSitePanel({ onClose }) {
           <div className="min-w-0">
             <p className="truncate text-[14px] font-bold text-gray-900">{preview.name}</p>
             <p className="truncate text-[12px] text-gray-500">
-              {preview.address || '주소 미입력'} · 총관리자 {preview.ownerName} · {preview.memberCount}명 참여 중
+              {preview.address || '주소 미입력'} · 관리자 {preview.ownerName} · {preview.memberCount}명 참여 중
             </p>
           </div>
           {preview.alreadyJoined ? (

@@ -196,7 +196,7 @@ function ReviewPanelBody({ report, onReviewed }) {
                 : user?.role === 'hq' && !user?.canReviewReports
                   ? '본사 관리자만 승인·보완 요청을 할 수 있어요. (현재 계정: 본사 직원)'
                   : user?.role === 'worker'
-                    ? '현장 총관리자나 본사가 검토해요.'
+                    ? '현장 관리자나 본사가 검토해요.'
                     : '이 보고를 검토할 권한이 없어요.'}
             </p>
           )}

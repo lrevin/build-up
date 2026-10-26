@@ -56,6 +56,25 @@ export const authApi = {
 
   me: () => (USE_DUMMY ? mockServer.me() : http.get(ENDPOINTS.AUTH.ME).then((r) => r.data)),
 
+  // 비밀번호 찾기: 코드 보내기 → 확인(resetToken) → 새 비밀번호. 바꾸면 다른 기기 로그인은 끊긴다
+  sendPasswordCode: (email) =>
+    USE_DUMMY
+      ? mockServer.sendCode('reset', email)
+      : http.post(ENDPOINTS.AUTH.PASSWORD_SEND, { email }, { skipAuth: true }).then((r) => r.data),
+
+  verifyPasswordCode: (email, code) =>
+    USE_DUMMY
+      ? mockServer.verifyCode('reset', email, code)
+      : http.post(ENDPOINTS.AUTH.PASSWORD_VERIFY, { email, code }, { skipAuth: true }).then((r) => r.data),
+
+  resetPassword: ({ email, resetToken, password }) =>
+    USE_DUMMY
+      ? mockServer.resetPassword({ email, resetToken, password })
+      : http.post(ENDPOINTS.AUTH.PASSWORD_RESET, { email, resetToken, password }, { skipAuth: true }).then((r) => r.data),
+
+  // 회원 탈퇴: 바로 로그아웃, 7일 뒤 계정 정보 영구 삭제 → { ok, deleteAt }
+  withdraw: () => (USE_DUMMY ? mockServer.withdraw() : http.delete(ENDPOINTS.AUTH.ME).then((r) => r.data)),
+
   // 실패해도 화면 로그아웃은 진행한다
   logout: (refreshToken) =>
     USE_DUMMY

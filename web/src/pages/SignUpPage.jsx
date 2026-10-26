@@ -29,7 +29,7 @@ const ROLE_OPTIONS = [
     role: USER_ROLE.HQ,
     title: '본사 관계자',
     desc: '여러 현장의 보고와 자재 요청을 받아요',
-    points: ['본사 코드 발급 → 현장 총관리자가 연결', '연결된 현장의 진척 보고 확인', '보고 승인 · 자재 요청 처리'],
+    points: ['본사 코드 발급 → 현장 관리자가 연결', '연결된 현장의 진척 보고 확인', '보고 승인 · 자재 요청 처리'],
   },
 ];
 
@@ -228,7 +228,7 @@ function InfoStep({ role, onBack, kakao, contact, setContact }) {
   const title = isHq ? '본사 관계자 가입' : isAdmin ? '현장 관리자 가입' : '일반 작업자 가입';
   const guide = isHq
     ? hqMode === 'create'
-      ? '가입하면 6자리 본사 코드가 발급돼요. 현장 총관리자에게 알려 주면 현장이 본사에 연결돼요.'
+      ? '가입하면 6자리 본사 코드가 발급돼요. 현장 관리자에게 알려 주면 현장이 본사에 연결돼요.'
       : '같은 본사의 다른 관계자에게 받은 본사 코드로 합류해요. 합류한 계정은 조회만 할 수 있어요.'
     : isAdmin
       ? reportMode === 'hq'
