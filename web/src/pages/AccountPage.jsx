@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../api/authApi';
 import { HQ_ROLE_LABEL, USER_ROLE_LABEL } from '../constants/enums';
 
-// 내 정보 (관리자·사용자 페이지 공통): 계정 정보, 비밀번호 찾기, 회원 탈퇴 — 앱 '내 정보'와 같은 기능
+// 내 정보 (관리자·사용자 페이지 공통): 계정 정보, 비밀번호 변경, 회원 탈퇴 — 앱 '내 정보'와 같은 기능
 // API 약속 3번 "비밀번호 찾기" · "회원 탈퇴"
 
 const inputCls =
@@ -76,7 +76,11 @@ export function PasswordCard({ email: initialEmail = '', onDone }) {
 
   return (
     <Card>
-      <CardHeader title="비밀번호 찾기" subtitle="이메일 인증 후 새 비밀번호를 정해요." />
+      <CardHeader
+        // 로그인한 내 정보에서는 '비밀번호 변경', 로그인 화면에서 열면 '비밀번호 찾기'
+        title={initialEmail ? '비밀번호 변경' : '비밀번호 찾기'}
+        subtitle="이메일 인증 후 새 비밀번호를 정해요."
+      />
       <form onSubmit={submit} className="space-y-3 px-5 pt-3 pb-5">
         <VerifyField kind="password" id="pw-email" value={email} onChange={setEmail} token={token} onToken={setToken} />
         <div className="grid gap-3 sm:grid-cols-2">
