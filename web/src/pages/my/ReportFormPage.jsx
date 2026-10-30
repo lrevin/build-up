@@ -297,7 +297,7 @@ export default function ReportFormPage() {
                   </p>
                 </Section>
 
-                <Section step={3} title="작업 전·후 사진" hint={`${photos.length}장 · 장수 제한 없음 · 촬영 시각·위치는 사진 정보(EXIF)에서 자동으로 읽어요`}>
+                <Section step={3} title="작업 전·후 사진">
                   <div className="mb-3 grid grid-cols-2 gap-2" role="tablist" aria-label="사진 구분">
                     {[
                       ['before', '작업 전'],
@@ -383,7 +383,7 @@ export default function ReportFormPage() {
                   </p>
                 </Section>
 
-                <Section step={4} title="진행률" hint={isAuto ? '보고할 공정을 고르고 그 공정의 진행률을 입력' : '현장 전체 진행률'}>
+                <Section step={4} title="공정 진행률">
                   {isAuto ? (
                     <div className="space-y-3">
                       <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="보고할 공정">
@@ -472,7 +472,7 @@ export default function ReportFormPage() {
                   </p>
                 </Section>
 
-                <Section step={5} title="작업 평가 · 사용 자재" hint="사용 자재는 승인될 때 재고에서 차감">
+                <Section step={5} title="작업 평가 · 사용 자재">
                   <div className="space-y-5">
                     {canRate && (
                       <div>
@@ -582,7 +582,7 @@ export default function ReportFormPage() {
                           <Icon name="file" size={15} /> 파일 첨부
                         </button>
                         <span className="text-[11px] text-gray-500">
-                          엑셀·PDF·한글·워드 등 {files.length}/{REPORT_LIMITS.FILES_MAX}개
+                          엑셀·PDF·한글·워드 등 최대 {REPORT_LIMITS.FILES_MAX}개
                         </span>
                         <input
                           ref={fileInput}
