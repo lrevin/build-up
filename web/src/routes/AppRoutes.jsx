@@ -9,6 +9,7 @@ import SystemPage from '../pages/SystemPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import AccountPage from '../pages/AccountPage';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
+import PolicyPage from '../pages/PolicyPage';
 // 관리자 페이지 (본사 관계자)
 import DashboardPage from '../pages/DashboardPage';
 import SitesPage from '../pages/SitesPage';
@@ -31,6 +32,9 @@ export default function AppRoutes() {
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/oauth/kakao/callback" element={<KakaoCallbackPage />} />
+      {/* 이용약관 · 개인정보 처리방침: 로그인 없이 공개(앱 스토어 등록에도 이 주소를 씀) */}
+      <Route path="/terms" element={<PolicyPage key="terms" kind="terms" />} />
+      <Route path="/privacy" element={<PolicyPage key="privacy" kind="privacy" />} />
       <Route
         path="/"
         element={

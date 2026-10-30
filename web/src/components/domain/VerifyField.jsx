@@ -191,7 +191,7 @@ export default function VerifyField({ kind, id, value, onChange, token, onToken,
                 className={`${inputCls} tabular pr-14 tracking-[0.2em]`}
               />
               <span
-                className={`tabular absolute top-1/2 right-3 -translate-y-1/2 text-[12px] ${left > 0 ? 'text-bad' : 'text-gray-400'}`}
+                className={`tabular absolute top-1/2 right-3 -translate-y-1/2 text-[12px] ${left > 0 ? 'text-bad' : 'text-gray-500'}`}
               >
                 {mmss(left)}
               </span>

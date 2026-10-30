@@ -50,7 +50,7 @@ export default function JoinSitePanel({ onClose }) {
           <p className="text-[12px] text-gray-500">현장 관리자에게 받은 6자리 코드를 입력하세요.</p>
         </div>
         {onClose && (
-          <button type="button" onClick={onClose} aria-label="닫기" className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-800">
+          <button type="button" onClick={onClose} aria-label="닫기" className="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800">
             <Icon name="close" size={16} />
           </button>
         )}

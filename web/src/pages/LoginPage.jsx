@@ -6,6 +6,7 @@ import KakaoButton, { OrDivider } from '../components/domain/KakaoButton';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../mocks/seed';
 import { homePathFor } from '../constants/enums';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import PolicyLinks from '../components/common/PolicyLinks';
 
 export default function LoginPage() {
   const { login, isAuthenticated, restoring, user } = useAuth();
@@ -106,6 +107,7 @@ export default function LoginPage() {
             회원가입
           </Link>
         </p>
+        <PolicyLinks />
 
         {USE_DUMMY && (
           <div className="mt-4 rounded-xl border border-ink-800 px-4 py-3 text-[12px] text-ink-400">

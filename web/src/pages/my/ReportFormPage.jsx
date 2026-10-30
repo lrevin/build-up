@@ -290,7 +290,7 @@ export default function ReportFormPage() {
                   />
                   <p
                     className={`tabular mt-1 text-right text-[11px] ${
-                      workText.length > REPORT_LIMITS.WORK_MAX ? 'font-semibold text-bad' : 'text-gray-400'
+                      workText.length > REPORT_LIMITS.WORK_MAX ? 'font-semibold text-bad' : 'text-gray-500'
                     }`}
                   >
                     {lines.length}건 · {workText.length}/{REPORT_LIMITS.WORK_MAX}자
@@ -353,7 +353,7 @@ export default function ReportFormPage() {
                       </ul>
                     )}
                     <div className="flex flex-col items-center gap-2 py-2 text-center">
-                      <Icon name="photo" size={24} className="text-gray-400" />
+                      <Icon name="photo" size={24} className="text-gray-500" />
                       <p className="text-[13px] text-gray-600">
                         <b>{photoPhase === 'before' ? '작업 전' : '작업 후'}</b> 사진을 여기로 끌어 놓거나
                       </p>
@@ -476,7 +476,7 @@ export default function ReportFormPage() {
                   <div className="space-y-5">
                     {canRate && (
                       <div>
-                        <p className="mb-2 text-[13px] font-semibold text-gray-700">오늘 작업 평점 <span className="font-normal text-gray-400">(선택)</span></p>
+                        <p className="mb-2 text-[13px] font-semibold text-gray-700">오늘 작업 평점 <span className="font-normal text-gray-500">(선택)</span></p>
                         <div className="flex flex-wrap items-center gap-2" aria-label="오늘 작업 평점">
                           <button
                             type="button"
@@ -498,13 +498,13 @@ export default function ReportFormPage() {
                             +
                           </button>
                           <RatingStars value={rating} onSelect={setRating} />
-                          <button type="button" onClick={() => setRating(null)} className="ml-1 text-[11px] text-gray-400 hover:underline">선택 해제</button>
+                          <button type="button" onClick={() => setRating(null)} className="ml-1 text-[11px] text-gray-500 hover:underline">선택 해제</button>
                         </div>
-                        <p className="mt-1 text-[11px] text-gray-400">현장 최고 책임자가 작성한 평점은 본사 검토 화면에 읽기 전용으로 표시됩니다.</p>
+                        <p className="mt-1 text-[11px] text-gray-500">현장 최고 책임자가 작성한 평점은 본사 검토 화면에 읽기 전용으로 표시됩니다.</p>
                       </div>
                     )}
                     <div>
-                      <p className="mb-1 text-[13px] font-semibold text-gray-700">오늘 사용한 자재 <span className="font-normal text-gray-400">(선택)</span></p>
+                      <p className="mb-1 text-[13px] font-semibold text-gray-700">오늘 사용한 자재 <span className="font-normal text-gray-500">(선택)</span></p>
                       <p className="mb-3 text-[11px] text-gray-500">승인 전에는 사용 기록만 저장되고 실제 현장 재고는 줄지 않습니다.</p>
                       <MaterialRowsEditor
                         rows={materialRows}
@@ -601,14 +601,14 @@ export default function ReportFormPage() {
                         <ul className="mt-2 space-y-1">
                           {files.map((f, i) => (
                             <li key={`${f.name}-${i}`} className="flex items-center gap-2 text-[12px] text-gray-700">
-                              <Icon name="file" size={14} className="text-gray-400" />
+                              <Icon name="file" size={14} className="text-gray-500" />
                               <span className="truncate">{f.name}</span>
-                              <span className="text-gray-400">{sizeLabel(f.size)}</span>
+                              <span className="text-gray-500">{sizeLabel(f.size)}</span>
                               <button
                                 type="button"
                                 onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
                                 aria-label={`${f.name} 빼기`}
-                                className="text-gray-400 hover:text-bad"
+                                className="text-gray-500 hover:text-bad"
                               >
                                 <Icon name="close" size={13} />
                               </button>
@@ -648,7 +648,7 @@ export default function ReportFormPage() {
                 }
               />
               <li className="flex items-start gap-2 text-[12px] text-gray-600">
-                <Icon name="pin" size={15} className={geo.status === 'ok' ? 'mt-0.5 text-ok' : 'mt-0.5 text-gray-400'} />
+                <Icon name="pin" size={15} className={geo.status === 'ok' ? 'mt-0.5 text-ok' : 'mt-0.5 text-gray-500'} />
                 <span className="flex-1">{geoText}</span>
                 {(geo.status === 'denied' || geo.status === 'unavailable') && (
                   <button type="button" onClick={geo.request} className="font-semibold text-gray-800 underline">
@@ -679,7 +679,7 @@ function Check({ ok, label, optional = false }) {
     <li className="flex items-center gap-2">
       <span
         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${
-          ok ? 'bg-ok text-white' : optional ? 'bg-gray-200 text-gray-400' : 'border border-bad text-bad'
+          ok ? 'bg-ok text-white' : optional ? 'bg-gray-200 text-gray-500' : 'border border-bad text-bad'
         }`}
       >
         {ok && <Icon name="check" size={11} strokeWidth={3} />}

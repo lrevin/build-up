@@ -91,13 +91,13 @@ export default function ProgressModeEditor({ mode, onModeChange, rows, onRowsCha
           <div className="space-y-2">
             {rows.map((row, index) => (
               <div key={row.id} className="grid grid-cols-[24px_minmax(0,1fr)_90px_auto] items-center gap-2">
-                <span className="text-center text-[12px] text-gray-400">{index + 1}</span>
+                <span className="text-center text-[12px] text-gray-500">{index + 1}</span>
                 <input value={row.name} maxLength={30} onChange={(e) => update(index, 'name', e.target.value)} placeholder="공정 이름" className="min-w-0 rounded-lg border border-line bg-white px-3 py-2 text-[13px] outline-none focus:border-ink-900" />
                 <label className="relative">
                   <input type="number" min="0.1" max="100" step="0.1" value={row.weight} onChange={(e) => update(index, 'weight', e.target.value)} className="tabular w-full rounded-lg border border-line bg-white px-2 py-2 pr-6 text-right text-[13px] outline-none focus:border-ink-900" />
-                  <span className="absolute right-2 top-2 text-[12px] text-gray-400">%</span>
+                  <span className="absolute right-2 top-2 text-[12px] text-gray-500">%</span>
                 </label>
-                <button type="button" onClick={() => onRowsChange(rows.filter((_, i) => i !== index))} className="px-2 text-[12px] text-gray-400 hover:text-bad">삭제</button>
+                <button type="button" onClick={() => onRowsChange(rows.filter((_, i) => i !== index))} className="px-2 text-[12px] text-gray-500 hover:text-bad">삭제</button>
               </div>
             ))}
           </div>

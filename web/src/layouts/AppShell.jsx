@@ -43,7 +43,7 @@ export default function AppShell({ caption, nav, badges = {}, action }) {
                 `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition ${
                   isActive
                     ? 'bg-ink-800 text-white shadow-[inset_3px_0_0_var(--color-brand)]'
-                    : 'text-gray-400 hover:bg-ink-900 hover:text-gray-200'
+                    : 'text-gray-500 hover:bg-ink-900 hover:text-gray-200'
                 }`
               }
             >

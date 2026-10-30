@@ -46,6 +46,10 @@ export default function AccountPage() {
       </div>
       {(user?.role === USER_ROLE.WORKER || user?.role === USER_ROLE.ADMIN) && <ManagerCard />}
       <WithdrawCard />
+      <p className="mt-4 space-x-3 text-center text-[12px] text-gray-500">
+        <Link to="/terms" className="hover:underline">이용약관</Link>
+        <Link to="/privacy" className="font-bold hover:underline">개인정보 처리방침</Link>
+      </p>
     </>
   );
 }

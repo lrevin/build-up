@@ -87,7 +87,7 @@ function ReviewPanelBody({ report, onReviewed }) {
             <section key={group.key}>
               <div className="mb-1.5 flex items-center justify-between">
                 <p className="text-[12px] font-bold text-gray-700">{group.label}</p>
-                <span className="tabular text-[10px] text-gray-400">{group.items.length}장</span>
+                <span className="tabular text-[10px] text-gray-500">{group.items.length}장</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {group.items.map(({ photo, index }) => (

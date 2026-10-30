@@ -54,7 +54,7 @@ export default function DashboardPage() {
         right={
           <label className="relative block w-64">
             <span className="sr-only">현장 검색</span>
-            <Icon name="search" size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400" />
+            <Icon name="search" size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-500" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -116,7 +116,7 @@ export default function DashboardPage() {
                       <span className="min-w-0 truncate text-gray-700">
                         {r.siteName} · <span className="tabular">{formatPercent(r.to)}</span>
                       </span>
-                      <span className="shrink-0 text-gray-400">{formatRelative(r.createdAt)}</span>
+                      <span className="shrink-0 text-gray-500">{formatRelative(r.createdAt)}</span>
                     </button>
                   </li>
                 ))}
@@ -163,12 +163,12 @@ function SiteOverview({ site, onSelectReport, selectedReportId }) {
             <span className="text-[12px] text-gray-500">
               전체 진행률
               {!isAuto && (
-              <span className="ml-3 inline-flex items-center gap-1 text-[11px] text-gray-400">
+              <span className="ml-3 inline-flex items-center gap-1 text-[11px] text-gray-500">
                 <i className="h-2 w-2 rounded-full bg-ink-900" /> 검토 완료
                 <i className="ml-2 h-2 w-2 rounded-full bg-brand" /> 검토 대기
               </span>
               )}
-              {isAuto && <span className="ml-2 text-[11px] text-gray-400">공정 진행률 × 비중 합계</span>}
+              {isAuto && <span className="ml-2 text-[11px] text-gray-500">공정 진행률 × 비중 합계</span>}
             </span>
             <span className="tabular text-lg font-extrabold text-gray-900">{formatPercent(site.overallProgress)}</span>
           </div>

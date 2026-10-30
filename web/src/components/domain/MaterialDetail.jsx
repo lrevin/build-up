@@ -15,7 +15,7 @@ export const itemsSummary = (items) =>
 
 export function NeededBy({ ymd }) {
   const d = daysUntil(ymd);
-  if (d == null) return <span className="text-gray-400">필요일 미정</span>;
+  if (d == null) return <span className="text-gray-500">필요일 미정</span>;
   const label = d < 0 ? `${-d}일 지남` : d === 0 ? '오늘까지' : `D-${d}`;
   return (
     <span className={d <= 1 ? 'font-semibold text-bad' : 'text-gray-600'}>
@@ -45,7 +45,7 @@ export function MaterialListItem({ request: m, active, onClick, showSite = true 
         </p>
         <p className="text-[11px]">
           <NeededBy ymd={m.neededBy} />
-          <span className="text-gray-400">
+          <span className="text-gray-500">
             {' '}
             · {m.author} · {formatRelative(m.createdAt)}
           </span>
@@ -117,7 +117,7 @@ export default function MaterialDetail({ request: m, onDone }) {
       </table>
 
       <p className="text-[12px]">
-        <Icon name="clock" size={13} className="mr-1 inline align-[-2px] text-gray-400" />
+        <Icon name="clock" size={13} className="mr-1 inline align-[-2px] text-gray-500" />
         <NeededBy ymd={m.neededBy} />
       </p>
       {m.note && <p className="rounded-lg border border-line px-3 py-2 text-[12px] text-gray-700">{m.note}</p>}
