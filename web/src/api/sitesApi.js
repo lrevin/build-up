@@ -80,6 +80,47 @@ export const sitesApi = {
       .then((r) => r.data);
   },
 
+  // ───── 현장 설정(현장 총관리자) · 참여자 — 앱의 '현장 설정' · '참여자' 화면과 같은 기능 ─────
+  updateSite: (siteId, input) =>
+    USE_DUMMY ? mockServer.unsupported() : http.patch(ENDPOINTS.SITES.DETAIL(siteId), input).then((r) => r.data),
+
+  setProgressMode: (siteId, { mode, processes }) =>
+    USE_DUMMY
+      ? mockServer.unsupported()
+      : http.put(ENDPOINTS.SITES.PROGRESS_MODE(siteId), { mode, processes }).then((r) => r.data),
+
+  deleteSite: (siteId) =>
+    USE_DUMMY ? mockServer.unsupported() : http.delete(ENDPOINTS.SITES.DETAIL(siteId)).then((r) => r.data),
+
+  regenerateCode: (siteId) =>
+    USE_DUMMY ? mockServer.unsupported() : http.post(ENDPOINTS.SITES.CODE(siteId)).then((r) => r.data.code),
+
+  // point: { latitude, longitude } 또는 null(지우기)
+  setLocation: (siteId, point) =>
+    USE_DUMMY
+      ? mockServer.unsupported()
+      : http
+          .put(ENDPOINTS.SITES.LOCATION(siteId), { latitude: point?.latitude ?? null, longitude: point?.longitude ?? null })
+          .then((r) => r.data),
+
+  previewCompany: (code) =>
+    USE_DUMMY ? mockServer.unsupported() : http.get(ENDPOINTS.COMPANIES.PREVIEW(code)).then((r) => r.data.name),
+
+  linkCompany: (siteId, code) =>
+    USE_DUMMY ? mockServer.unsupported() : http.put(ENDPOINTS.SITES.HQ_LINK(siteId), { code }).then((r) => r.data),
+
+  unlinkCompany: (siteId) =>
+    USE_DUMMY ? mockServer.unsupported() : http.delete(ENDPOINTS.SITES.HQ_LINK(siteId)).then((r) => r.data),
+
+  getMembers: (siteId) =>
+    USE_DUMMY ? mockServer.unsupported() : http.get(ENDPOINTS.SITES.MEMBERS(siteId)).then((r) => r.data),
+
+  removeMember: (siteId, memberId) =>
+    USE_DUMMY ? mockServer.unsupported() : http.delete(ENDPOINTS.SITES.MEMBER(siteId, memberId)).then((r) => r.data),
+
+  leaveSite: (siteId) =>
+    USE_DUMMY ? mockServer.unsupported() : http.delete(ENDPOINTS.SITES.LEAVE(siteId)).then((r) => r.data),
+
   // 작업일보 엑셀 내려받기 주소 (from/to: 'YYYY-MM-DD'). 실서버 주소는 10분간 유효
   worklogLink: (siteId, { from, to }) =>
     USE_DUMMY

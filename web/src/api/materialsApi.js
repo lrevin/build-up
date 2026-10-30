@@ -13,4 +13,8 @@ export const materialsApi = {
     USE_DUMMY
       ? mockServer.setMaterialStatus(requestId, status, reason)
       : http.patch(ENDPOINTS.MATERIALS.STATUS(requestId), { status, reason }).then((r) => r.data),
+
+  // 처리 전 본인 요청 취소(request.canCancel)
+  cancel: (requestId) =>
+    USE_DUMMY ? mockServer.unsupported() : http.delete(ENDPOINTS.MATERIALS.CANCEL(requestId)).then((r) => r.data),
 };

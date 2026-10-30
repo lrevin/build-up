@@ -15,4 +15,8 @@ export const reportsApi = {
     USE_DUMMY
       ? mockServer.updateMemo(reportId, memo)
       : http.patch(ENDPOINTS.REPORTS.UPDATE(reportId), { memo }).then((r) => r.data),
+
+  // 현장의 가장 최근 보고만, 작성자나 현장 관리자가 삭제(report.canDelete). 승인된 보고면 진행률·자재 재고도 되돌린다
+  remove: (reportId) =>
+    USE_DUMMY ? mockServer.unsupported() : http.delete(ENDPOINTS.REPORTS.UPDATE(reportId)).then((r) => r.data),
 };

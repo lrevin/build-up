@@ -18,6 +18,7 @@ export const ENDPOINTS = {
     PASSWORD_SEND: '/auth/password/send', // POST { email } → { expiresInSeconds, resendAfterSeconds }
     PASSWORD_VERIFY: '/auth/password/verify', // POST { email, code } → { resetToken, expiresInSeconds }
     PASSWORD_RESET: '/auth/password/reset', // POST { email, resetToken, password } → { ok }
+    MANAGER: '/auth/me/manager', // PUT { companyCode, company, linkSites } → user (현장 관리자로 전환 · 보고 체계 변경)
   },
   HQ: {
     INFO: '/hq', // HqInfo
@@ -36,6 +37,17 @@ export const ENDPOINTS = {
     STOCK: (siteId) => `/sites/${siteId}/materials`, // PUT { materials } → Site
     REPORT_PAGE: (siteId) => `/sites/${siteId}/reports/page`, // ReportPage  ?cursor=&size=
     WORKLOG_LINK: (siteId) => `/sites/${siteId}/worklog/link`, // POST ?from=&to= → { url } (10분 유효)
+    // 아래는 현장 총관리자(만든 사람) 전용 — 앱의 '현장 설정'과 같은 기능
+    PROGRESS_MODE: (siteId) => `/sites/${siteId}/progress-mode`, // PUT { mode, processes } → Site
+    CODE: (siteId) => `/sites/${siteId}/code`, // POST → { code } (참여 코드 재발급)
+    LOCATION: (siteId) => `/sites/${siteId}/location`, // PUT { latitude, longitude } → Site (둘 다 null이면 지우기)
+    HQ_LINK: (siteId) => `/sites/${siteId}/hq`, // PUT { code } → Site / DELETE → Site (본사 연결·해제)
+    MEMBERS: (siteId) => `/sites/${siteId}/members`, // GET → Member[]
+    MEMBER: (siteId, memberId) => `/sites/${siteId}/members/${memberId}`, // DELETE (참여자 내보내기)
+    LEAVE: (siteId) => `/sites/${siteId}/members/me`, // DELETE (작업자: 현장 나가기)
+  },
+  COMPANIES: {
+    PREVIEW: (code) => `/companies/code/${code}`, // GET → { name } (본사 코드 확인)
   },
   REPORTS: {
     REVIEW: (reportId) => `/reports/${reportId}/review`, // PATCH { status, comment } → Report
@@ -43,6 +55,7 @@ export const ENDPOINTS = {
   },
   MATERIALS: {
     STATUS: (requestId) => `/materials/${requestId}/status`, // PATCH { status, reason } → MaterialRequest
+    CANCEL: (requestId) => `/materials/${requestId}`, // DELETE (처리 전 본인 요청 취소)
   },
 };
 

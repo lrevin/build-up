@@ -16,5 +16,6 @@ export const queryKeys = {
     detail: (siteId) => ['sites', siteId, 'detail'],
     reports: (siteId) => ['sites', siteId, 'reports'],
     materials: (siteId) => ['sites', siteId, 'materials'],
+    members: (siteId) => ['sites', siteId, 'members'],
   },
 };

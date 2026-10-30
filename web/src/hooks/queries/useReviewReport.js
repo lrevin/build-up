@@ -14,6 +14,19 @@ const replaceInPages = (updated) => (data) =>
       }
     : data;
 
+// 보고 삭제(현장의 가장 최근 보고만). 진행률·자재 재고가 바뀔 수 있어 현장 정보도 다시 불러온다
+export function useDeleteReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reportId }) => reportsApi.remove(reportId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.hq.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.my.all });
+    },
+  });
+}
+
 // 승인 / 보완 요청
 export function useReviewReport() {
   const queryClient = useQueryClient();

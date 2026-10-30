@@ -75,6 +75,13 @@ export const authApi = {
   // 회원 탈퇴: 바로 로그아웃, 7일 뒤 계정 정보 영구 삭제 → { ok, deleteAt }
   withdraw: () => (USE_DUMMY ? mockServer.withdraw() : http.delete(ENDPOINTS.AUTH.ME).then((r) => r.data)),
 
+  // 현장 관리자로 전환 · 보고 체계 변경(앱 '현장 관리자 전환'과 같음)
+  // companyCode가 비어 있으면 최고 책임자. linkSites면 내가 만든 현장들의 본사 연결도 같이 바꾼다
+  setManager: ({ companyCode, linkSites }) =>
+    USE_DUMMY
+      ? mockServer.unsupported()
+      : http.put(ENDPOINTS.AUTH.MANAGER, { companyCode: companyCode || null, linkSites: !!linkSites }).then((r) => r.data),
+
   // 실패해도 화면 로그아웃은 진행한다
   logout: (refreshToken) =>
     USE_DUMMY
