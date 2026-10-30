@@ -10,6 +10,7 @@ import ReportReviewPanel from '../components/domain/ReportReviewPanel';
 import PhotoTimeline from '../components/domain/PhotoTimeline';
 import ProcessProgress from '../components/domain/ProcessProgress';
 import WorklogExport from '../components/domain/WorklogExport';
+import SiteStockPanel from '../components/domain/SiteStockPanel';
 import { PROGRESS_MODE, PROGRESS_MODE_LABEL } from '../constants/enums';
 import { useSite, useSiteReports } from '../hooks/queries/useSiteQueries';
 import { flattenPages } from '../hooks/queries/useHqQueries';
@@ -55,6 +56,10 @@ export default function SiteDetailPage() {
         <Stat label="검토 대기" value={`${pending}건`} />
         <Stat label="현장 관리자" value={site.ownerName} />
         <Stat label="참여 인원" value={`${site.memberCount}명`} />
+      </div>
+
+      <div className="mb-4">
+        <SiteStockPanel site={site} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">

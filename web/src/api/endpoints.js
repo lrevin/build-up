@@ -27,11 +27,13 @@ export const ENDPOINTS = {
   },
   SITES: {
     MINE: '/sites', // GET → SiteSummary[] (내가 참여한 현장)
+    CREATE: '/sites', // POST SiteRequest → Site
     PREVIEW: (code) => `/sites/code/${code}`, // GET → SitePreview { id, name, address, ownerName, memberCount, alreadyJoined }
     JOIN: '/sites/join', // POST { code: 6자리 } → SiteSummary (참여 코드로 현장 참여)
     DETAIL: (siteId) => `/sites/${siteId}`, // Site
     REPORTS: (siteId) => `/sites/${siteId}/reports`, // POST multipart → Report (보고 제출)
-    MATERIALS: (siteId) => `/sites/${siteId}/materials`, // GET → MaterialRequest[]
+    MATERIALS: (siteId) => `/sites/${siteId}/materials`, // GET → MaterialRequest[], POST CreateRequest → MaterialRequest
+    STOCK: (siteId) => `/sites/${siteId}/materials`, // PUT { materials } → Site
     REPORT_PAGE: (siteId) => `/sites/${siteId}/reports/page`, // ReportPage  ?cursor=&size=
     WORKLOG_LINK: (siteId) => `/sites/${siteId}/worklog/link`, // POST ?from=&to= → { url } (10분 유효)
   },

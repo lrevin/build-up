@@ -97,6 +97,7 @@ function siteByCode(user, code) {
 const userName = (id) => db.users.find((u) => u.id === id)?.name ?? '-';
 const byNewest = (a, b) => (a.createdAt < b.createdAt ? 1 : -1);
 const reportsOf = (siteId) => db.reports.filter((r) => r.siteId === siteId).sort(byNewest);
+const approvedReportsOf = (siteId) => reportsOf(siteId).filter((r) => r.review?.status === 'approved');
 
 function withPermissions(user, row) {
   const site = siteById(row.siteId);
@@ -108,7 +109,7 @@ function withPermissions(user, row) {
 // 자동 계산 현장의 공정별 현재 진행률 = 그 공정의 가장 최근 보고 값
 function processesOf(site) {
   if (site.progressMode !== 'auto') return [];
-  const reports = reportsOf(site.id);
+  const reports = approvedReportsOf(site.id);
   return site.processes.map((p) => {
     const last = reports.find((r) => r.processKey === p.key);
     return {
@@ -123,13 +124,14 @@ function processesOf(site) {
 
 function summary(user, s) {
   const reports = reportsOf(s.id);
+  const approved = approvedReportsOf(s.id);
   return {
     id: s.id,
     name: s.name,
     address: s.address,
     ownerName: userName(s.ownerId),
     memberCount: s.memberIds.length,
-    overallProgress: reports[0]?.to ?? 0,
+    overallProgress: approved[0]?.to ?? 0,
     isOwner: s.ownerId === user.id,
     workType: s.workType,
     lastReportedAt: reports[0]?.createdAt ?? null,
@@ -418,6 +420,41 @@ export const mockServer = {
       return memberSites(user).map((s) => summary(user, s));
     }),
 
+  createSite: (input) =>
+    respond(() => {
+      const user = currentUser();
+      if (user.role !== 'admin') throw apiError(403, '현장 관리자만 현장을 만들 수 있어요.');
+      const site = {
+        id: `site-${Date.now()}`,
+        name: String(input.name ?? '').trim(),
+        address: String(input.address ?? '').trim(),
+        workType: String(input.workType ?? '').trim(),
+        ownerId: user.id,
+        memberIds: [user.id],
+        companyId: null,
+        code: String(100000 + Math.floor(Math.random() * 900000)),
+        latitude: null,
+        longitude: null,
+        progressMode: input.progressMode ?? 'manual',
+        processes: (input.processes ?? []).map((process, index) => ({
+          key: process.key || `process-${Date.now()}-${index + 1}`,
+          name: process.name,
+          weight: Number(process.weight),
+          start: 0,
+        })),
+        materials: (input.materials ?? []).map((m) => ({ ...m, updatedAt: new Date().toISOString() })),
+      };
+      if (!site.name || !site.address) throw apiError(400, '현장명과 주소를 입력해 주세요.');
+      db.sites.push(site);
+      return {
+        ...summary(user, site),
+        ownerId: user.id,
+        code: site.code,
+        materials: site.materials,
+        processes: processesOf(site),
+      };
+    }),
+
   getHqReportPage: (cursor, size) =>
     respond(() => {
       const user = currentUser();
@@ -450,6 +487,23 @@ export const mockServer = {
         longitude: s.longitude,
         progressMode: s.progressMode,
         processes: processesOf(s),
+        materials: s.materials ?? [],
+      };
+    }),
+
+  setSiteMaterials: (siteId, materials) =>
+    respond(() => {
+      const user = currentUser();
+      const site = findMemberSite(user, siteId);
+      if (site.ownerId !== user.id) throw apiError(403, '현장 최고 책임자만 자재 재고를 수정할 수 있어요.');
+      site.materials = (materials ?? []).map((m) => ({ ...m, updatedAt: new Date().toISOString() }));
+      return {
+        ...summary(user, site),
+        ownerId: site.ownerId,
+        ownerName: userName(site.ownerId),
+        code: site.code,
+        materials: site.materials,
+        processes: processesOf(site),
       };
     }),
 
@@ -465,7 +519,7 @@ export const mockServer = {
       const user = currentUser();
       const row = db.reports.find((r) => r.id === reportId);
       if (!row) throw apiError(404, '보고를 찾을 수 없습니다.');
-      findVisibleSite(user, row.siteId);
+      const site = findVisibleSite(user, row.siteId);
       if (!['approved', 'revision'].includes(status)) throw apiError(400, '알 수 없는 검토 상태입니다.');
       const text = String(comment ?? '').trim();
       if (status === 'revision' && !text) throw apiError(400, '무엇을 보완해야 하는지 코멘트를 적어 주세요.');
@@ -479,6 +533,15 @@ export const mockServer = {
         );
       }
       row.review = { status, comment: text || null, reviewer: user.name, reviewedAt: new Date().toISOString() };
+      if (status === 'approved' && !row.materialsAppliedAt && row.materialUsages?.length) {
+        for (const usage of row.materialUsages) {
+          const stock = (site.materials ?? []).find(
+            (item) => item.name.trim().toLowerCase() === usage.name.trim().toLowerCase() && item.unit.trim().toLowerCase() === usage.unit.trim().toLowerCase(),
+          );
+          if (stock) stock.quantity = Math.max(0, Number(stock.quantity) - Number(usage.quantity));
+        }
+        row.materialsAppliedAt = new Date().toISOString();
+      }
       return withPermissions(user, row);
     }),
 
@@ -525,6 +588,45 @@ export const mockServer = {
         .map((m) => withMaterialPermissions(user, m));
     }),
 
+  createMaterialRequest: (siteId, input) =>
+    respond(() => {
+      const user = currentUser();
+      const site = findMemberSite(user, siteId);
+      const items = (input.items ?? []).map((item) => ({
+        name: String(item.name ?? '').trim(),
+        quantity: Number(item.quantity),
+        unit: String(item.unit ?? '').trim(),
+      }));
+      if (!items.length || items.some((item) => !item.name || !item.unit || !(item.quantity > 0))) {
+        throw apiError(400, '자재명·수량·단위를 모두 입력해 주세요.');
+      }
+      const now = new Date().toISOString();
+      const ownerRequest = site.ownerId === user.id;
+      const linked = !!site.companyId;
+      const status = ownerRequest && !linked ? 'approved' : 'requested';
+      const request = {
+        id: `m-${Date.now()}`,
+        siteId: site.id,
+        processKey: input.processKey ?? null,
+        processName: null,
+        items,
+        neededBy: input.neededBy || null,
+        urgent: !!input.urgent,
+        note: String(input.note ?? '').trim(),
+        status,
+        rejectReason: null,
+        author: user.name,
+        authorId: user.id,
+        createdAt: now,
+        timeline: [
+          { status: 'requested', by: user.name, byHq: false, at: now },
+          ...(status === 'approved' ? [{ status: 'approved', by: user.name, byHq: false, at: now }] : []),
+        ],
+      };
+      db.materials.unshift(request);
+      return withMaterialPermissions(user, request);
+    }),
+
   // 실서버: POST /sites/{id}/reports (multipart). 더미는 사진을 브라우저 안 주소(blob:)로만 보관한다
   createReport: async (siteId, input) => {
     await delay(600);
@@ -532,7 +634,7 @@ export const mockServer = {
     const site = findMemberSite(user, siteId);
     let work = String(input.work ?? '').trim();
     if (work.length > 100) throw apiError(400, '진행한 작업은 100자까지 쓸 수 있어요.');
-    const current = reportsOf(site.id)[0]?.to ?? 0;
+    const current = approvedReportsOf(site.id)[0]?.to ?? 0;
     let processFields = { processKey: 'work', processName: work.slice(0, 30), processFrom: null, processTo: null };
     let to;
     if (site.progressMode === 'auto') {
@@ -559,12 +661,13 @@ export const mockServer = {
     if ((input.files?.length ?? 0) > 5) throw apiError(400, '파일은 최대 5개까지 첨부할 수 있어요.');
 
     const now = new Date();
-    const photos = (input.photos ?? []).map((f) => ({
+    const photos = (input.photos ?? []).map((f, index) => ({
       url: URL.createObjectURL(f),
       // 실서버는 사진 EXIF에서 촬영 시각·GPS를 읽는다. 더미는 파일 수정 시각으로 대신한다
       takenAt: f.lastModified ? new Date(f.lastModified).toISOString() : null,
       latitude: null,
       longitude: null,
+      phase: input.photoPhases?.[index] ?? 'after',
     }));
     const checks = [];
     if (photos.some((p) => p.takenAt && now - new Date(p.takenAt) > 86_400_000)) {
@@ -595,7 +698,19 @@ export const mockServer = {
           ? { status: 'approved', comment: null, reviewer: null, reviewedAt: null }
           : { status: 'pending', comment: null, reviewer: null, reviewedAt: null },
       checks,
+      rating: owner ? input.rating ?? null : null,
+      materialUsages: input.materials ?? [],
+      materialsAppliedAt: null,
     };
+    if (row.review.status === 'approved' && row.materialUsages.length) {
+      for (const usage of row.materialUsages) {
+        const stock = (site.materials ?? []).find(
+          (item) => item.name.trim().toLowerCase() === usage.name.trim().toLowerCase() && item.unit.trim().toLowerCase() === usage.unit.trim().toLowerCase(),
+        );
+        if (stock) stock.quantity = Math.max(0, Number(stock.quantity) - Number(usage.quantity));
+      }
+      row.materialsAppliedAt = now.toISOString();
+    }
     db.reports.push(row);
     return clone(withPermissions(user, row));
   },

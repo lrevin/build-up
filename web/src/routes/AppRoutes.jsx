@@ -20,6 +20,7 @@ import PhotosPage from '../pages/PhotosPage';
 import MySitesPage from '../pages/my/MySitesPage';
 import MySiteDetailPage from '../pages/my/MySiteDetailPage';
 import ReportFormPage from '../pages/my/ReportFormPage';
+import CreateSitePage from '../pages/my/CreateSitePage';
 import MyReportsPage from '../pages/my/MyReportsPage';
 import { ADMIN_ROLES, USER_ROLE, USER_ROLES } from '../constants/enums';
 
@@ -68,6 +69,7 @@ export default function AppRoutes() {
         <Route index element={<MySitesPage />} />
         <Route path="sites/:siteId" element={<MySiteDetailPage />} />
         <Route path="report/new" element={<ReportFormPage />} />
+        <Route path="sites/new" element={<CreateSitePage />} />
         <Route path="reports" element={<MyReportsPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="*" element={<NotFoundPage />} />

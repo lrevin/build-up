@@ -5,6 +5,8 @@ import { EmptyState, ErrorState, LoadingBlock } from '../components/common/State
 import MaterialDetail, { MaterialListItem } from '../components/domain/MaterialDetail';
 import { useHqMaterials } from '../hooks/queries/useMaterials';
 import { useHqSites } from '../hooks/queries/useHqQueries';
+import { useSite } from '../hooks/queries/useSiteQueries';
+import SiteStockPanel from '../components/domain/SiteStockPanel';
 import { MATERIAL_STATUS, MATERIAL_STATUS_LABEL } from '../constants/enums';
 
 const TABS = [
@@ -21,6 +23,7 @@ export default function MaterialsPage() {
   const [tab, setTab] = useState(MATERIAL_STATUS.REQUESTED);
   const [siteId, setSiteId] = useState('all');
   const [selectedId, setSelectedId] = useState(null);
+  const stockQuery = useSite(siteId === 'all' ? null : siteId);
 
   const all = useMemo(() => query.data ?? [], [query.data]);
   const inSite = all.filter((m) => siteId === 'all' || m.siteId === siteId);
@@ -62,6 +65,12 @@ export default function MaterialsPage() {
           </select>
         }
       />
+
+      {siteId !== 'all' && stockQuery.data && (
+        <div className="mb-4">
+          <SiteStockPanel site={stockQuery.data} />
+        </div>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
         <Card className="min-w-0">
