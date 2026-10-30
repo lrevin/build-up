@@ -63,11 +63,11 @@ export default function MaterialRequestForm({ site, onCreated }) {
 
       <div className="mt-4 grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
         <label className="text-[12px] font-semibold text-gray-700">
-          필요일 <span className="font-normal text-gray-400">(선택)</span>
+          필요일 <span className="font-normal text-gray-500">(선택)</span>
           <input type="date" min={new Date().toISOString().slice(0, 10)} value={neededBy} onChange={(e) => setNeededBy(e.target.value)} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[13px] outline-none focus:border-ink-900" />
         </label>
         <label className="text-[12px] font-semibold text-gray-700">
-          요청 메모 <span className="font-normal text-gray-400">(선택)</span>
+          요청 메모 <span className="font-normal text-gray-500">(선택)</span>
           <input value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} placeholder="사용 위치, 반입 시간, 하차 장소 등" className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-[13px] outline-none focus:border-ink-900" />
         </label>
       </div>

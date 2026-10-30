@@ -38,7 +38,7 @@ function Summary({ sites, ownerCount }) {
           <p className={`tabular mt-1 text-[24px] leading-tight font-extrabold tracking-tight ${t.alert ? 'text-[#8a6400]' : 'text-gray-900'}`}>
             {t.value}
           </p>
-          <p className="mt-0.5 text-[11px] text-gray-400">{t.sub}</p>
+          <p className="mt-0.5 text-[11px] text-gray-500">{t.sub}</p>
         </Card>
       ))}
     </div>

@@ -98,7 +98,7 @@ export default function MyReportsPage() {
                     tab === t.key ? 'border-ink-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-800'
                   } ${t.key === REVIEW_STATUS.REVISION && counts.revision ? 'text-bad' : ''}`}
                 >
-                  {t.label} <span className="tabular text-gray-400">{counts[t.key] ?? 0}</span>
+                  {t.label} <span className="tabular text-gray-500">{counts[t.key] ?? 0}</span>
                 </button>
               ))}
             </div>

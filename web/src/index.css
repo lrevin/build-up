@@ -41,6 +41,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 키보드(Tab)로 이동할 때 지금 어디에 있는지 보이게. 마우스 클릭에는 표시하지 않음 */
+:focus-visible {
+  outline: 2px solid var(--color-brand-strong, #e0a100);
+  outline-offset: 2px;
+}
+
 /* 숫자 폭 고정 (진행률·시간 정렬) */
 .tabular {
   font-variant-numeric: tabular-nums;

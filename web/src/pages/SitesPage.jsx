@@ -52,6 +52,16 @@ export default function SitesPage() {
                     <tr
                       key={s.id}
                       onClick={() => navigate(`/admin/sites/${s.id}`)}
+                      // 키보드로도 열 수 있게(Tab으로 이동 → Enter)
+                      tabIndex={0}
+                      role="link"
+                      aria-label={`${s.name} 현장 상세`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigate(`/admin/sites/${s.id}`);
+                        }
+                      }}
                       className="cursor-pointer border-b border-line last:border-b-0 hover:bg-gray-50"
                     >
                       <td className="px-5 py-3">

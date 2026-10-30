@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Icon from '../components/common/Icon';
 import useDocumentTitle from '../hooks/useDocumentTitle';
+import PolicyLinks from '../components/common/PolicyLinks';
 import { homePathFor, USER_ROLE } from '../constants/enums';
 import { KAKAO_LOGIN } from '../config';
 import KakaoButton, { OrDivider } from '../components/domain/KakaoButton';
@@ -163,6 +164,9 @@ function InfoStep({ role, onBack, kakao, contact, setContact }) {
   const [tried, setTried] = useState(false);
   const [serverError, setServerError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  // 필수 동의 3가지(앱 가입 화면과 같음)
+  const [agree, setAgree] = useState({ age: false, terms: false, privacy: false });
+  const allAgreed = agree.age && agree.terms && agree.privacy;
 
   // 카카오 가입: 비밀번호 없음. 카카오가 인증한 이메일이 오면 그 이메일 그대로(이메일 인증 생략). 휴대폰 인증은 항상
   const kakaoEmail = !!kakao?.email;
@@ -196,6 +200,7 @@ function InfoStep({ role, onBack, kakao, contact, setContact }) {
   else if (!contact.phoneToken) errors.phone = '휴대폰 인증을 완료해 주세요.';
   if (needPassword && f.password.length < LIMIT.PASSWORD_MIN) errors.password = '비밀번호는 8자 이상이어야 해요.';
   if (needPassword && f.password2 !== f.password) errors.password2 = '비밀번호가 서로 달라요.';
+  if (!allAgreed) errors.agree = '필수 약관에 모두 동의해 주세요.';
   const show = (k) => (tried ? errors[k] : undefined);
 
   const onSubmit = async (e) => {
@@ -217,6 +222,9 @@ function InfoStep({ role, onBack, kakao, contact, setContact }) {
         emailVerificationToken: needEmailVerify ? contact.emailToken : null,
         phoneVerificationToken: contact.phoneToken,
         signupToken: kakao?.signupToken ?? null,
+        agreeAge: agree.age,
+        agreeTerms: agree.terms,
+        agreePrivacy: agree.privacy,
       });
       navigate(homePathFor(me.role), { replace: true, state: { welcome: true } });
     } catch (err) {
@@ -326,6 +334,46 @@ function InfoStep({ role, onBack, kakao, contact, setContact }) {
         </>
       )}
 
+      <fieldset className="rounded-lg border border-line px-3 py-2">
+        <legend className="sr-only">약관 동의</legend>
+        <label className="flex cursor-pointer items-center gap-2 py-1.5 text-[14px] font-bold text-gray-900">
+          <input
+            type="checkbox"
+            checked={allAgreed}
+            onChange={(e) => setAgree({ age: e.target.checked, terms: e.target.checked, privacy: e.target.checked })}
+            className="h-4 w-4 accent-ink-900"
+          />
+          전체 동의하기
+        </label>
+        <div className="my-1 border-t border-line" />
+        {[
+          ['age', '만 14세 이상입니다', null],
+          ['terms', '이용약관 동의', '/terms'],
+          ['privacy', '개인정보 수집·이용 동의', '/privacy'],
+        ].map(([key, label, href]) => (
+          <div key={key} className="flex items-center justify-between gap-2 py-1">
+            <label className="flex cursor-pointer items-center gap-2 text-[13px] text-gray-800">
+              <input
+                type="checkbox"
+                checked={agree[key]}
+                onChange={(e) => setAgree((a) => ({ ...a, [key]: e.target.checked }))}
+                className="h-4 w-4 accent-ink-900"
+              />
+              <span>
+                <span className="text-gray-500">[필수]</span> {label}
+              </span>
+            </label>
+            {href && (
+              // 새 탭으로 열어 입력하던 가입 내용이 사라지지 않게
+              <a href={href} target="_blank" rel="noreferrer" className="shrink-0 text-[12px] text-gray-500 underline-offset-2 hover:underline">
+                보기
+              </a>
+            )}
+          </div>
+        ))}
+        {show('agree') && <p className="mt-1 text-[12px] text-bad">{show('agree')}</p>}
+      </fieldset>
+
       {serverError && (
         <p role="alert" className="whitespace-pre-line rounded-lg bg-bad-soft px-3 py-2 text-[12px] text-bad">
           {serverError}
@@ -373,6 +421,7 @@ export default function SignUpPage() {
             로그인
           </Link>
         </p>
+        <PolicyLinks />
       </div>
     </div>
   );

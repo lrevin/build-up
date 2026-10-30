@@ -31,7 +31,7 @@ export default function ReportListItem({ report, active = false, onClick, showSi
         <p className="flex items-center gap-1.5 truncate text-[13px] text-gray-800">
           {hasProcess && <Badge tone="neutral">{report.processName}</Badge>}
           <span className="truncate">{workSummary(report.work, report.processName)}</span>
-          <span className="shrink-0 text-gray-400">(사진 {thumbs.length}장)</span>
+          <span className="shrink-0 text-gray-500">(사진 {thumbs.length}장)</span>
         </p>
         <p className="tabular text-[11px] text-gray-500">
           {report.author} · 전체 {report.to.toFixed(1)}% ({formatDelta(report.from, report.to)})

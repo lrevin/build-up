@@ -161,9 +161,14 @@ POST /api/auth/signup
   "password": "8자이상비밀번호", "company": null, "companyCode": null,
   "emailVerificationToken": "ev_9f3a...",
   "phoneVerificationToken": "pv_51c0...",
-  "signupToken": null
+  "signupToken": null,
+  "agreeAge": true, "agreeTerms": true, "agreePrivacy": true
 }
 ```
+- **필수 동의**(만 14세 이상 · 이용약관 · 개인정보 수집·이용)가 하나라도 `true`가 아니면 `400`
+  `{ "message": "만 14세 이상만 가입할 수 있어요." }` / `{ "message": "이용약관과 개인정보 수집·이용에 동의해 주세요." }`.
+  세 칸이 아예 없으면(예전 앱) `{ "message": "약관 동의가 필요해요. 앱이 예전 버전이면 최신 버전으로 업데이트해 주세요." }`.
+  인증을 확인하기 전에 거절하므로 받은 인증 토큰은 그대로 남습니다. 동의 시각과 약관 버전은 `users`에 저장(V15)
 - 인증이 없거나, 만료됐거나, **인증한 이메일·번호와 다른 값**으로 가입하면 `400`
   `{ "message": "이메일 인증을 완료해 주세요." }` / `{ "message": "휴대폰 인증을 완료해 주세요." }`
 - 응답은 로그인과 같은 모양(바로 로그인 상태)

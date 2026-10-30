@@ -83,7 +83,7 @@ export default function CreateSitePage() {
           )}
         </Card>
         <Card className="p-5">
-          <h2 className="text-[15px] font-bold text-gray-900">초기 자재 재고 <span className="font-normal text-gray-400">(선택)</span></h2>
+          <h2 className="text-[15px] font-bold text-gray-900">초기 자재 재고 <span className="font-normal text-gray-500">(선택)</span></h2>
           <p className="mt-1 mb-3 text-[12px] text-gray-500">현재 보유량을 입력하면 승인된 보고의 사용량이 자동 차감됩니다.</p>
           <MaterialRowsEditor
             rows={materials}

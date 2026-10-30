@@ -24,7 +24,7 @@ export default function KakaoButton({ label = '카카오로 시작하기' }) {
 // "또는" 구분선
 export function OrDivider() {
   return (
-    <div className="flex items-center gap-3 text-[11px] text-gray-400">
+    <div className="flex items-center gap-3 text-[11px] text-gray-500">
       <span className="h-px flex-1 bg-line" />
       또는
       <span className="h-px flex-1 bg-line" />

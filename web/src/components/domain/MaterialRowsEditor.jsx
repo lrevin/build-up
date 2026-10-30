@@ -73,7 +73,7 @@ export default function MaterialRowsEditor({
             className="rounded-lg border border-line px-2 py-2 text-[13px] outline-none focus:border-ink-900 disabled:bg-gray-50"
           />
           {!disabled && (
-            <button type="button" onClick={() => remove(index)} className="px-2 text-[12px] text-gray-400 hover:text-bad">
+            <button type="button" onClick={() => remove(index)} className="px-2 text-[12px] text-gray-500 hover:text-bad">
               삭제
             </button>
           )}
@@ -105,7 +105,7 @@ export default function MaterialRowsEditor({
                   className="rounded-full border border-line bg-white px-3 py-1.5 text-[12px] font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-default disabled:bg-gray-50 disabled:text-gray-400"
                 >
                   {preset.name}
-                  {preset.note && <span className="ml-1 font-normal text-gray-400">{preset.note}</span>}
+                  {preset.note && <span className="ml-1 font-normal text-gray-500">{preset.note}</span>}
                 </button>
               );
             })}

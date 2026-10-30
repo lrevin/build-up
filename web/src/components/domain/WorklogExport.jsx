@@ -46,7 +46,7 @@ export default function WorklogExport({ siteId }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className={input} aria-label="시작일" />
-      <span className="text-gray-400">~</span>
+      <span className="text-gray-500">~</span>
       <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={input} aria-label="종료일" />
       <button
         type="button"
