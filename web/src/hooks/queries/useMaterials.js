@@ -9,6 +9,19 @@ export const useHqMaterials = () =>
     refetchInterval: 30_000,
   });
 
+// 처리 전 본인 요청 취소
+export function useCancelMaterial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ requestId }) => materialsApi.cancel(requestId),
+    onSuccess: (_, { siteId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.materials(siteId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.hq.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.my.all });
+    },
+  });
+}
+
 // 자재 요청 승인 / 반려
 export function useSetMaterialStatus() {
   const queryClient = useQueryClient();

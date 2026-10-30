@@ -3,7 +3,7 @@ import Badge from '../common/Badge';
 import Icon from '../common/Icon';
 import { useToast } from '../common/Toast';
 import MaterialStatusBadge from './MaterialStatusBadge';
-import { useSetMaterialStatus } from '../../hooks/queries/useMaterials';
+import { useCancelMaterial, useSetMaterialStatus } from '../../hooks/queries/useMaterials';
 import { useAuth } from '../../contexts/AuthContext';
 import { MATERIAL_REJECT_REASONS, MATERIAL_STATUS, MATERIAL_STATUS_LABEL } from '../../constants/enums';
 import { daysUntil, formatDateTime, formatRelative } from '../../services/format';
@@ -134,6 +134,8 @@ export default function MaterialDetail({ request: m, onDone }) {
         ))}
       </ol>
 
+      {m.canCancel && <CancelRequestButton request={m} />}
+
       {m.canApprove ? (
         rejecting ? (
           <div className="space-y-2">
@@ -212,6 +214,36 @@ export default function MaterialDetail({ request: m, onDone }) {
           </p>
         )
       )}
+    </div>
+  );
+}
+
+// 처리 전 본인 요청 취소(앱 자재 요청의 '요청 취소'와 같음)
+function CancelRequestButton({ request }) {
+  const cancel = useCancelMaterial();
+  const toast = useToast();
+  const [error, setError] = useState(null);
+
+  const onCancel = () => {
+    if (!window.confirm('이 자재 요청을 취소할까요?')) return;
+    setError(null);
+    cancel.mutate(
+      { requestId: request.id, siteId: request.siteId },
+      { onSuccess: () => toast.show('자재 요청을 취소했어요.'), onError: (e) => setError(e.message) },
+    );
+  };
+
+  return (
+    <div>
+      {error && <p className="mb-2 text-[12px] text-bad">{error}</p>}
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={cancel.isPending}
+        className="w-full rounded-lg border border-line py-2 text-[13px] font-semibold text-gray-700 hover:border-bad/40 hover:text-bad disabled:opacity-50"
+      >
+        {cancel.isPending ? '취소 중…' : '요청 취소'}
+      </button>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import Icon from '../common/Icon';
 import ReviewBadge from './ReviewBadge';
 import ReportChecks from './ReportChecks';
 import PhotoViewer from './PhotoViewer';
-import { useReviewReport } from '../../hooks/queries/useReviewReport';
+import { useDeleteReport, useReviewReport } from '../../hooks/queries/useReviewReport';
 import { useUpdateMemo } from '../../hooks/queries/useMyQueries';
 import { useToast } from '../common/Toast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -251,6 +251,8 @@ function ReviewPanelBody({ report, onReviewed }) {
 
       {report.canEdit && status === REVIEW_STATUS.REVISION && <ResubmitBox report={report} />}
 
+      {report.canDelete && <DeleteReportButton report={report} />}
+
       {viewerIndex != null && (
         <PhotoViewer
           items={viewerItems}
@@ -259,6 +261,37 @@ function ReviewPanelBody({ report, onReviewed }) {
           onClose={() => setViewerIndex(null)}
         />
       )}
+    </div>
+  );
+}
+
+// 현장의 가장 최근 보고 삭제(앱 보고 상세의 삭제와 같음). 승인된 보고면 진행률·자재 재고도 되돌아간다
+function DeleteReportButton({ report }) {
+  const remove = useDeleteReport();
+  const toast = useToast();
+  const [error, setError] = useState(null);
+
+  const onDelete = () => {
+    if (!window.confirm('이 보고를 삭제할까요?\n사진·첨부도 함께 지워지고 되돌릴 수 없어요.')) return;
+    setError(null);
+    remove.mutate(
+      { reportId: report.id },
+      { onSuccess: () => toast.show('보고를 삭제했어요.'), onError: (e) => setError(e.message) },
+    );
+  };
+
+  return (
+    <div className="border-t border-line pt-3">
+      {error && <p className="mb-2 text-[12px] text-bad">{error}</p>}
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={remove.isPending}
+        className="w-full rounded-lg border border-bad/40 py-2 text-[13px] font-bold text-bad hover:bg-bad-soft disabled:opacity-50"
+      >
+        {remove.isPending ? '삭제 중…' : '보고 삭제'}
+      </button>
+      <p className="mt-1.5 text-[11px] text-gray-500">현장의 가장 최근 보고만 삭제할 수 있어요.</p>
     </div>
   );
 }

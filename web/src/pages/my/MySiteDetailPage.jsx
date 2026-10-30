@@ -13,6 +13,8 @@ import MaterialDetail, { MaterialListItem } from '../../components/domain/Materi
 import WorklogExport from '../../components/domain/WorklogExport';
 import SiteStockPanel from '../../components/domain/SiteStockPanel';
 import MaterialRequestForm from '../../components/domain/MaterialRequestForm';
+import SiteMembersPanel from '../../components/domain/SiteMembersPanel';
+import SiteSettingsPanel from '../../components/domain/SiteSettingsPanel';
 import { useSite, useSiteReports } from '../../hooks/queries/useSiteQueries';
 import { useSiteMaterials } from '../../hooks/queries/useMyQueries';
 import { flattenPages } from '../../hooks/queries/useHqQueries';
@@ -24,6 +26,8 @@ const TABS = [
   { key: 'reports', label: '보고' },
   { key: 'materials', label: '자재 요청' },
   { key: 'photos', label: '사진' },
+  { key: 'members', label: '참여자' },
+  { key: 'settings', label: '현장 설정', ownerOnly: true }, // 현장 총관리자(만든 사람)만
 ];
 
 function Stat({ label, value }) {
@@ -95,7 +99,7 @@ export default function MySiteDetailPage() {
       </div>
 
       <div className="mb-4 flex gap-1 border-b border-line" role="tablist">
-        {TABS.map((t) => (
+        {TABS.filter((t) => !t.ownerOnly || isOwner).map((t) => (
           <button
             key={t.key}
             type="button"
@@ -224,6 +228,10 @@ export default function MySiteDetailPage() {
           <PhotoTimeline reports={allReports} />
         </Card>
       )}
+
+      {tab === 'members' && <SiteMembersPanel site={site} isOwner={isOwner} />}
+
+      {tab === 'settings' && isOwner && <SiteSettingsPanel key={site.id} site={site} />}
     </>
   );
 }

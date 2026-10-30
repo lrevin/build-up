@@ -729,6 +729,12 @@ export const mockServer = {
     }),
 
   // 실서버: POST /sites/{id}/worklog/link?from&to → { url }
+  // 데모(가짜 API) 모드에서 아직 흉내 내지 않는 기능(현장 설정·참여자 관리 등)
+  unsupported: () =>
+    respond(() => {
+      throw apiError(400, '데모 모드에서는 지원하지 않는 기능이에요. 실제 서버에 연결해 주세요.');
+    }),
+
   worklogLink: (siteId, from, to) =>
     respond(() => {
       const user = currentUser();

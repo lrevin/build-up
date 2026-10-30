@@ -78,9 +78,16 @@ export function AuthProvider({ children }) {
     [startSession],
   );
 
+  // 역할이 바뀐 뒤(현장 관리자 전환 등) 서버의 최신 내 정보로 바꾼다
+  const refreshUser = useCallback(async () => {
+    const me = await authApi.me();
+    setUser(me);
+    return me;
+  }, []);
+
   const value = useMemo(
-    () => ({ user, isAuthenticated: !!user, restoring, login, signUp, loginWithKakao, logout }),
-    [user, restoring, login, signUp, loginWithKakao, logout],
+    () => ({ user, isAuthenticated: !!user, restoring, login, signUp, loginWithKakao, logout, refreshUser }),
+    [user, restoring, login, signUp, loginWithKakao, logout, refreshUser],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
