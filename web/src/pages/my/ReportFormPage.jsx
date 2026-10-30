@@ -18,6 +18,7 @@ import {
 } from '../../constants/enums';
 import { formatPercent, workLines } from '../../services/format';
 import { useAuth } from '../../contexts/AuthContext';
+import RatingStars from '../../components/domain/RatingStars';
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 서버 spring.servlet.multipart.max-file-size
 const PHOTO_EXT = /\.(jpe?g|png|webp|heic)$/i;
@@ -496,17 +497,7 @@ export default function ReportFormPage() {
                           >
                             +
                           </button>
-                          {[1, 2, 3, 4, 5].map((score) => (
-                            <button
-                              key={score}
-                              type="button"
-                              onClick={() => setRating(rating === score ? score - 0.5 : score)}
-                              className={`text-[22px] leading-none ${rating != null && rating >= score - 0.5 ? 'text-brand-strong' : 'text-gray-200'}`}
-                              aria-label={`${score}점`}
-                            >
-                              ★
-                            </button>
-                          ))}
+                          <RatingStars value={rating} onSelect={setRating} />
                           <button type="button" onClick={() => setRating(null)} className="ml-1 text-[11px] text-gray-400 hover:underline">선택 해제</button>
                         </div>
                         <p className="mt-1 text-[11px] text-gray-400">현장 최고 책임자가 작성한 평점은 본사 검토 화면에 읽기 전용으로 표시됩니다.</p>
