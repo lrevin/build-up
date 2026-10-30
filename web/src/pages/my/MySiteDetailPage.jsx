@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import PageHeader from '../../components/common/PageHeader';
 import { Card, CardHeader } from '../../components/common/Card';
@@ -47,6 +47,7 @@ export default function MySiteDetailPage() {
   const reportsQuery = useSiteReports(siteId);
   const materialsQuery = useSiteMaterials(siteId);
   const [tab, setTab] = useState('reports');
+  const settingsGuard = useRef(null); // 현장 설정에서 저장 안 한 변경이 있으면 탭 이동 전에 묻는다
   const [mineOnly, setMineOnly] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedMaterialId, setSelectedMaterialId] = useState(null);
@@ -105,7 +106,7 @@ export default function MySiteDetailPage() {
             type="button"
             role="tab"
             aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => (settingsGuard.current ? settingsGuard.current(() => setTab(t.key)) : setTab(t.key))}
             className={`-mb-px border-b-2 px-4 pb-2.5 text-[14px] font-semibold ${
               tab === t.key ? 'border-ink-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-800'
             }`}
@@ -231,7 +232,7 @@ export default function MySiteDetailPage() {
 
       {tab === 'members' && <SiteMembersPanel site={site} isOwner={isOwner} />}
 
-      {tab === 'settings' && isOwner && <SiteSettingsPanel key={site.id} site={site} />}
+      {tab === 'settings' && isOwner && <SiteSettingsPanel key={site.id} site={site} guardRef={settingsGuard} />}
     </>
   );
 }

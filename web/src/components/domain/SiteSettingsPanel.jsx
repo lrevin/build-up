@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker, useNavigate } from 'react-router-dom';
 import { Card, CardHeader } from '../common/Card';
+import Icon from '../common/Icon';
 import { useToast } from '../common/Toast';
 import ProgressModeEditor, { validateProcesses } from './ProgressModeEditor';
 import { sitesApi } from '../../api/sitesApi';
@@ -35,18 +36,167 @@ function Message({ error }) {
   return error ? <p className="mt-2 text-[12px] text-bad">{error}</p> : null;
 }
 
-export default function SiteSettingsPanel({ site }) {
+// 저장 안 한 변경 사항: 바뀐 섹션이 저장 함수를 등록하고, 다른 화면·탭으로 넘어갈 때 저장할지 묻는다
+const UnsavedContext = createContext(null);
+
+function useUnsaved(key, dirty, save) {
+  const ctx = useContext(UnsavedContext);
+  const saveRef = useRef(save);
+  useEffect(() => {
+    saveRef.current = save;
+  });
+  useEffect(() => {
+    ctx.set(key, dirty ? () => saveRef.current() : null);
+    return () => ctx.set(key, null);
+  }, [ctx, key, dirty]);
+}
+
+// guardRef: 부모(현장 상세)의 탭 이동도 같은 확인을 거치게 넘겨주는 함수 자리
+export default function SiteSettingsPanel({ site, guardRef }) {
+  const saves = useRef({});
+  const skip = useRef(false); // 현장 삭제처럼 묻지 않고 떠나야 할 때
+  const [dirtyCount, setDirtyCount] = useState(0);
+  const [tabLeave, setTabLeave] = useState(null); // 탭 이동 대기
+  const [saving, setSaving] = useState(false);
+  const dirty = dirtyCount > 0;
+
+  const ctx = useMemo(
+    () => ({
+      set(key, save) {
+        if (save) saves.current[key] = save;
+        else delete saves.current[key];
+        setDirtyCount(Object.keys(saves.current).length);
+      },
+      leaveWithoutAsking() {
+        skip.current = true;
+      },
+    }),
+    [],
+  );
+
+  // 다른 화면으로 이동(메뉴·링크·뒤로 가기). 로그아웃은 막지 않는다
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && !skip.current && currentLocation.pathname !== nextLocation.pathname && nextLocation.pathname !== '/login',
+  );
+
+  // 새로고침·창 닫기는 브라우저 기본 확인 창
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const onBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty]);
+
+  const guard = useCallback((proceed) => (dirty ? setTabLeave(() => proceed) : proceed()), [dirty]);
+  useEffect(() => {
+    if (!guardRef) return undefined;
+    guardRef.current = guard;
+    return () => {
+      guardRef.current = null;
+    };
+  }, [guardRef, guard]);
+
+  const leaving =
+    blocker.state === 'blocked'
+      ? { proceed: () => blocker.proceed(), stay: () => blocker.reset() }
+      : tabLeave
+        ? {
+            proceed: () => {
+              setTabLeave(null);
+              tabLeave();
+            },
+            stay: () => setTabLeave(null),
+          }
+        : null;
+
+  const saveAndLeave = async () => {
+    setSaving(true);
+    let ok = true;
+    for (const save of Object.values(saves.current)) {
+      // 하나라도 실패하면 이동하지 않고 그 섹션에 오류를 보여 준다
+      if (!(await save())) ok = false;
+    }
+    setSaving(false);
+    if (ok) leaving.proceed();
+    else leaving.stay();
+  };
+
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-2">
-      <div className="space-y-4">
-        <InfoSection site={site} />
-        <ProgressSection site={site} />
+    <UnsavedContext.Provider value={ctx}>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
+          <InfoSection site={site} />
+          <ProgressSection site={site} />
+        </div>
+        <div className="space-y-4">
+          <CodeSection site={site} />
+          <LocationSection site={site} />
+          <CompanySection site={site} />
+          <DeleteSection site={site} />
+        </div>
       </div>
-      <div className="space-y-4">
-        <CodeSection site={site} />
-        <LocationSection site={site} />
-        <CompanySection site={site} />
-        <DeleteSection site={site} />
+      {leaving && <UnsavedDialog saving={saving} onSave={saveAndLeave} onDiscard={leaving.proceed} onStay={leaving.stay} />}
+    </UnsavedContext.Provider>
+  );
+}
+
+function UnsavedDialog({ saving, onSave, onDiscard, onStay }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && !saving && onStay();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [saving, onStay]);
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="unsaved-title"
+      onClick={() => !saving && onStay()}
+    >
+      <div className="w-full max-w-[380px] rounded-2xl bg-white px-6 pt-7 pb-5 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warn-soft text-warn">
+          <Icon name="alert" size={24} strokeWidth={2.2} />
+        </span>
+        <h2 id="unsaved-title" className="mt-4 text-[22px] font-extrabold tracking-tight text-gray-900">
+          변경 사항을 저장할까요?
+        </h2>
+        <p className="mt-2 text-[14px] leading-relaxed text-gray-600">
+          현장 설정에서 바꾼 내용이
+          <br />
+          아직 저장되지 않았어요.
+        </p>
+        <div className="mt-6 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onDiscard}
+            disabled={saving}
+            className="rounded-lg bg-gray-100 py-2.5 text-[14px] font-bold text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+          >
+            저장 안 함
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            className="rounded-lg bg-ink-900 py-2.5 text-[14px] font-bold text-white hover:bg-ink-800 disabled:opacity-60"
+          >
+            {saving ? '저장 중…' : '저장'}
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onStay}
+          disabled={saving}
+          className="mt-3 text-[13px] font-semibold text-gray-500 hover:text-gray-800 disabled:opacity-60"
+        >
+          계속 수정하기
+        </button>
       </div>
     </div>
   );
@@ -61,22 +211,32 @@ function InfoSection({ site }) {
   const toast = useToast();
   const changed = name !== site.name || address !== site.address || workType !== (site.workType ?? '');
 
-  const save = (e) => {
-    e.preventDefault();
+  const save = async () => {
     if (!name.trim() || !address.trim() || !workType.trim()) {
       setError('현장명, 주소, 공사 종류를 모두 입력해 주세요.');
-      return;
+      return false;
     }
     setError(null);
-    update.mutate(
-      { name: name.trim(), address: address.trim(), workType: workType.trim() },
-      { onSuccess: () => toast.show('현장 정보를 저장했어요.'), onError: (err) => setError(err.message) },
-    );
+    try {
+      await update.mutateAsync({ name: name.trim(), address: address.trim(), workType: workType.trim() });
+      toast.show('현장 정보를 저장했어요.');
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    }
   };
+  useUnsaved('info', changed, save);
 
   return (
     <Section title="현장 정보">
-      <form onSubmit={save} className="space-y-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          save();
+        }}
+        className="space-y-3"
+      >
         <label className="block">
           <span className="mb-1 block text-[12px] font-semibold text-gray-600">현장명</span>
           <input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} className={inputCls} />
@@ -145,13 +305,16 @@ function ProgressSection({ site }) {
   const [error, setError] = useState(null);
   const save = useSetProgressMode(site.id);
   const toast = useToast();
+  const savedMode = site.progressMode ?? PROGRESS_MODE.MANUAL;
+  const changed =
+    mode !== savedMode || (mode === PROGRESS_MODE.AUTO && processSignature(rows) !== processSignature(site.processes ?? []));
 
-  const submit = () => {
+  const submit = async () => {
     if (mode === PROGRESS_MODE.AUTO) {
       const problem = validateProcesses(rows);
       if (problem) {
         setError(problem);
-        return;
+        return false;
       }
     }
     setError(null);
@@ -159,11 +322,16 @@ function ProgressSection({ site }) {
       mode === PROGRESS_MODE.AUTO
         ? rows.map((r) => ({ ...(r.key ? { key: r.key } : {}), name: r.name.trim(), weight: Number(r.weight) }))
         : [];
-    save.mutate(
-      { mode, processes },
-      { onSuccess: () => toast.show('진행률 계산 방식을 저장했어요.'), onError: (err) => setError(err.message) },
-    );
+    try {
+      await save.mutateAsync({ mode, processes });
+      toast.show('진행률 계산 방식을 저장했어요.');
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    }
   };
+  useUnsaved('progress', changed, submit);
 
   return (
     <Section title="진행률 계산 방식" subtitle="바꿔도 지금까지의 진행률에서 이어서 계산해요.">
@@ -176,6 +344,11 @@ function ProgressSection({ site }) {
       </div>
     </Section>
   );
+}
+
+// 공정 이름·가중치·순서가 같으면 바뀌지 않은 것으로 본다
+function processSignature(list) {
+  return JSON.stringify(list.map((p) => [String(p.name ?? '').trim(), Number(p.weight)]));
 }
 
 function LocationSection({ site }) {
@@ -272,17 +445,25 @@ function CompanySection({ site }) {
     }
   };
 
-  const connect = () => {
+  const connect = async () => {
     setError(null);
-    link.mutate(code, {
-      onSuccess: () => {
-        toast.show(`${preview}에 연결했어요.`);
-        setCode('');
-        setPreview(null);
-      },
-      onError: (err) => setError(err.message),
-    });
+    try {
+      await link.mutateAsync(code);
+      toast.show(`${preview}에 연결했어요.`);
+      setCode('');
+      setPreview(null);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    }
   };
+  // 확인한 본사가 있으면 연결, 아직 확인 전이면 확인만 하고 머문다(어느 본사인지 보고 연결하도록)
+  useUnsaved('company', code !== '', async () => {
+    if (preview) return connect();
+    await check();
+    return false;
+  });
 
   const disconnect = () => {
     if (!window.confirm(`${site.hqName} 연결을 끊을까요?\n앞으로 이 현장의 보고는 본사 없이 현장 안에서만 검토해요.`)) return;
@@ -338,6 +519,7 @@ function DeleteSection({ site }) {
   const remove = useDeleteSite(site.id);
   const toast = useToast();
   const navigate = useNavigate();
+  const unsaved = useContext(UnsavedContext);
   const [error, setError] = useState(null);
 
   const onDelete = () => {
@@ -353,6 +535,7 @@ function DeleteSection({ site }) {
     remove.mutate(undefined, {
       onSuccess: () => {
         toast.show('현장을 삭제했어요.');
+        unsaved.leaveWithoutAsking();
         navigate('/my', { replace: true });
       },
       onError: (err) => setError(err.message),
