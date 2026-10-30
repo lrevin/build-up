@@ -5,6 +5,7 @@ import { Card } from '../../components/common/Card';
 import Icon from '../../components/common/Icon';
 import { EmptyState, LoadingBlock } from '../../components/common/StateViews';
 import { useToast } from '../../components/common/Toast';
+import MaterialRowsEditor, { cleanMaterials } from '../../components/domain/MaterialRowsEditor';
 import { useMySites, useCreateReport } from '../../hooks/queries/useMyQueries';
 import { useSite } from '../../hooks/queries/useSiteQueries';
 import { useGeolocation } from '../../hooks/useGeolocation';
@@ -16,12 +17,15 @@ import {
   WEATHER_LABEL,
 } from '../../constants/enums';
 import { formatPercent, workLines } from '../../services/format';
+import { useAuth } from '../../contexts/AuthContext';
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 서버 spring.servlet.multipart.max-file-size
 const PHOTO_EXT = /\.(jpe?g|png|webp|heic)$/i;
 const DOC_EXT = /\.(pdf|xlsx?|csv|hwpx?|docx?|pptx?|txt|zip)$/i;
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 const r1 = (v) => Math.round(v * 10) / 10;
+const RATING_MIN = 0.5;
+const RATING_MAX = 5;
 const sizeLabel = (b) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(b / 1024))}KB`);
 
 function Section({ step, title, hint, children }) {
@@ -66,9 +70,11 @@ export default function ReportFormPage() {
   const { data: site, isPending: sitePending } = useSite(siteId || null);
   const geo = useGeolocation();
   const create = useCreateReport();
+  const { user } = useAuth();
 
   const [work, setWork] = useState('');
-  const [photos, setPhotos] = useState([]); // { id, file, url }
+  const [photos, setPhotos] = useState([]); // { id, file, url, phase }
+  const [photoPhase, setPhotoPhase] = useState('before');
   const [files, setFiles] = useState([]); // File[]
   const [to, setTo] = useState(null); // 직접 입력 현장
   const [processKey, setProcessKey] = useState(null); // 자동 계산 현장
@@ -77,6 +83,8 @@ export default function ReportFormPage() {
   const [workers, setWorkers] = useState('');
   const [equipment, setEquipment] = useState('');
   const [memo, setMemo] = useState('');
+  const [rating, setRating] = useState(null);
+  const [materialRows, setMaterialRows] = useState([]);
   const [tried, setTried] = useState(false); // 한 번 제출을 시도한 뒤부터 입력할 때마다 다시 검사
   const [serverError, setServerError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
@@ -88,6 +96,7 @@ export default function ReportFormPage() {
   const isAuto = site?.progressMode === PROGRESS_MODE.AUTO;
   const current = site?.overallProgress ?? 0;
   const process = site?.processes?.find((p) => p.key === processKey);
+  const canRate = site?.ownerId === user?.id;
 
   // 현장이 바뀌면 진행률 입력값을 현재 값으로 맞춘다
   useEffect(() => {
@@ -116,17 +125,17 @@ export default function ReportFormPage() {
     return Math.max(current, r1(after));
   }, [isAuto, site, processKey, processTo, current]);
 
-  const addPhotos = (list) => {
+  const addPhotos = (list, phase = photoPhase) => {
     const incoming = [...list];
     const rejected = incoming.filter((f) => !(f.type.startsWith('image/') || PHOTO_EXT.test(f.name)) || f.size > MAX_FILE_BYTES);
     const ok = incoming.filter((f) => !rejected.includes(f));
-    const room = REPORT_LIMITS.PHOTOS_MAX - photos.length;
+    // 사진 장수 제한 없음(앱·서버와 같음). 한 장당 20MB까지
     if (rejected.length) toast.show(`사진(jpg·png·webp·heic, 20MB 이하)만 올릴 수 있어요. ${rejected.length}개 제외`, 'error');
-    if (ok.length > room) toast.show(`사진은 최대 ${REPORT_LIMITS.PHOTOS_MAX}장이에요. ${ok.length - room}장 제외`, 'error');
-    const added = ok.slice(0, Math.max(0, room)).map((file) => ({
+    const added = ok.map((file) => ({
       id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
       file,
       url: URL.createObjectURL(file),
+      phase,
     }));
     setPhotos((prev) => [...prev, ...added]);
   };
@@ -161,6 +170,10 @@ export default function ReportFormPage() {
       if (!workText) out.push('진행한 작업을 입력해 주세요.');
       if (to == null || to < current || to > 100) out.push(`진행률은 지금 진행률(${current}%) 이상, 100% 이하여야 해요.`);
     }
+    const materials = cleanMaterials(materialRows);
+    if (materials.some((m) => !m.name || !m.unit || !Number.isFinite(m.quantity) || m.quantity <= 0)) {
+      out.push('사용 자재는 자재명·0보다 큰 수량·단위를 모두 입력해 주세요.');
+    }
     return out;
   };
 
@@ -183,6 +196,9 @@ export default function ReportFormPage() {
         equipment: equipment.trim(),
       },
       photos: photos.map((p) => p.file),
+      photoPhases: photos.map((p) => p.phase),
+      rating: canRate ? rating : null,
+      materials: cleanMaterials(materialRows),
       files,
       location: geo.status === 'ok' ? geo.coords : null,
     };
@@ -223,7 +239,7 @@ export default function ReportFormPage() {
       <Link to="/my" className="mb-2 inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-800">
         <Icon name="left" size={14} /> 내 현장
       </Link>
-      <PageHeader title="보고 작성" subtitle="진행한 작업 → 사진 → 진행률 → 제출" />
+      <PageHeader title="보고 작성" subtitle="진행한 작업 → 작업 전·후 사진 → 진행률 → 제출" />
 
       {errors.length > 0 && (
         <div role="alert" className="mb-4 rounded-xl border border-bad/30 bg-bad-soft px-4 py-3 text-[13px] text-bad">
@@ -280,7 +296,26 @@ export default function ReportFormPage() {
                   </p>
                 </Section>
 
-                <Section step={3} title="사진" hint={`${photos.length}/${REPORT_LIMITS.PHOTOS_MAX}장 · 촬영 시각·위치는 사진 정보(EXIF)에서 자동으로 읽어요`}>
+                <Section step={3} title="작업 전·후 사진" hint={`${photos.length}장 · 장수 제한 없음 · 촬영 시각·위치는 사진 정보(EXIF)에서 자동으로 읽어요`}>
+                  <div className="mb-3 grid grid-cols-2 gap-2" role="tablist" aria-label="사진 구분">
+                    {[
+                      ['before', '작업 전'],
+                      ['after', '작업 후'],
+                    ].map(([phase, label]) => (
+                      <button
+                        key={phase}
+                        type="button"
+                        role="tab"
+                        aria-selected={photoPhase === phase}
+                        onClick={() => setPhotoPhase(phase)}
+                        className={`rounded-lg border px-3 py-2 text-[13px] font-bold ${
+                          photoPhase === phase ? 'border-ink-900 bg-ink-900 text-white' : 'border-line text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        {label} 사진 {photos.filter((p) => p.phase === phase).length}장
+                      </button>
+                    ))}
+                  </div>
                   <div
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -290,7 +325,7 @@ export default function ReportFormPage() {
                     onDrop={(e) => {
                       e.preventDefault();
                       setDragOver(false);
-                      addPhotos(e.dataTransfer.files);
+                      addPhotos(e.dataTransfer.files, photoPhase);
                     }}
                     className={`rounded-xl border-2 border-dashed p-4 transition ${
                       dragOver ? 'border-brand bg-brand-soft' : 'border-line'
@@ -310,7 +345,7 @@ export default function ReportFormPage() {
                               <Icon name="close" size={12} strokeWidth={2.4} />
                             </button>
                             <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">
-                              {sizeLabel(p.file.size)}
+                              {p.phase === 'before' ? '작업 전' : '작업 후'} · {sizeLabel(p.file.size)}
                             </span>
                           </li>
                         ))}
@@ -318,11 +353,12 @@ export default function ReportFormPage() {
                     )}
                     <div className="flex flex-col items-center gap-2 py-2 text-center">
                       <Icon name="photo" size={24} className="text-gray-400" />
-                      <p className="text-[13px] text-gray-600">사진을 여기로 끌어 놓거나</p>
+                      <p className="text-[13px] text-gray-600">
+                        <b>{photoPhase === 'before' ? '작업 전' : '작업 후'}</b> 사진을 여기로 끌어 놓거나
+                      </p>
                       <button
                         type="button"
                         onClick={() => photoInput.current?.click()}
-                        disabled={photos.length >= REPORT_LIMITS.PHOTOS_MAX}
                         className="rounded-lg border border-line bg-white px-3 py-1.5 text-[13px] font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
                       >
                         사진 선택
@@ -335,14 +371,14 @@ export default function ReportFormPage() {
                         hidden
                         aria-label="사진 파일"
                         onChange={(e) => {
-                          addPhotos(e.target.files);
+                          addPhotos(e.target.files, photoPhase);
                           e.target.value = '';
                         }}
                       />
                     </div>
                   </div>
                   <p className="mt-2 text-[11px] text-gray-500">
-                    메신저로 받은 사진은 촬영 정보가 지워져 있을 수 있어요. 휴대폰 갤러리 원본을 올려 주세요.
+                    사진 구분을 먼저 선택해 주세요. 메신저로 받은 사진은 촬영 정보가 지워져 있을 수 있어요.
                   </p>
                 </Section>
 
@@ -430,9 +466,71 @@ export default function ReportFormPage() {
                       />
                     </div>
                   )}
+                  <p className="mt-3 rounded-lg bg-brand-soft px-3 py-2 text-[11px] text-[#725300]">
+                    여기서 입력한 값은 제안 진행률입니다. 검토 대기·보완 요청 중에는 현재 진행률이 유지되고, 승인 후 실제 진행률에 반영됩니다.
+                  </p>
                 </Section>
 
-                <Section step={5} title="작업일보 · 메모 · 첨부" hint="모두 선택 입력">
+                <Section step={5} title="작업 평가 · 사용 자재" hint="사용 자재는 승인될 때 재고에서 차감">
+                  <div className="space-y-5">
+                    {canRate && (
+                      <div>
+                        <p className="mb-2 text-[13px] font-semibold text-gray-700">오늘 작업 평점 <span className="font-normal text-gray-400">(선택)</span></p>
+                        <div className="flex flex-wrap items-center gap-2" aria-label="오늘 작업 평점">
+                          <button
+                            type="button"
+                            onClick={() => setRating((value) => Math.max(RATING_MIN, r1((value ?? RATING_MIN) - 0.1)))}
+                            disabled={(rating ?? 0) <= RATING_MIN}
+                            className="h-9 w-9 rounded-full border border-line text-[16px] font-bold text-gray-600 disabled:opacity-30"
+                          >
+                            −
+                          </button>
+                          <strong className="tabular min-w-16 text-center text-[16px] text-gray-900">
+                            {rating == null ? '—' : `${rating.toFixed(1)}점`}
+                          </strong>
+                          <button
+                            type="button"
+                            onClick={() => setRating((value) => (value == null ? RATING_MIN : Math.min(RATING_MAX, r1(value + 0.1))))}
+                            disabled={(rating ?? 0) >= RATING_MAX}
+                            className="h-9 w-9 rounded-full border border-line text-[16px] font-bold text-gray-600 disabled:opacity-30"
+                          >
+                            +
+                          </button>
+                          {[1, 2, 3, 4, 5].map((score) => (
+                            <button
+                              key={score}
+                              type="button"
+                              onClick={() => setRating(rating === score ? score - 0.5 : score)}
+                              className={`text-[22px] leading-none ${rating != null && rating >= score - 0.5 ? 'text-brand-strong' : 'text-gray-200'}`}
+                              aria-label={`${score}점`}
+                            >
+                              ★
+                            </button>
+                          ))}
+                          <button type="button" onClick={() => setRating(null)} className="ml-1 text-[11px] text-gray-400 hover:underline">선택 해제</button>
+                        </div>
+                        <p className="mt-1 text-[11px] text-gray-400">현장 최고 책임자가 작성한 평점은 본사 검토 화면에 읽기 전용으로 표시됩니다.</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="mb-1 text-[13px] font-semibold text-gray-700">오늘 사용한 자재 <span className="font-normal text-gray-400">(선택)</span></p>
+                      <p className="mb-3 text-[11px] text-gray-500">승인 전에는 사용 기록만 저장되고 실제 현장 재고는 줄지 않습니다.</p>
+                      <MaterialRowsEditor
+                        rows={materialRows}
+                        onChange={setMaterialRows}
+                        presets={(site.materials ?? []).map((material) => ({
+                          name: material.name,
+                          unit: material.unit,
+                          note: `${Number(material.quantity).toLocaleString()}${material.unit} 남음`,
+                        }))}
+                        presetLabel="현재 재고에서 선택"
+                        onFull={() => setServerError('보고서에 입력할 자재 수가 너무 많습니다.')}
+                      />
+                    </div>
+                  </div>
+                </Section>
+
+                <Section step={6} title="작업일보 · 메모 · 첨부" hint="모두 선택 입력">
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="w-14 text-[13px] text-gray-600">날씨</span>
@@ -542,6 +640,13 @@ export default function ReportFormPage() {
               <Check ok={!!site} label={site ? site.name : '현장 선택'} />
               <Check ok={isAuto || lines.length > 0} label={lines.length ? `진행한 작업 ${lines.length}건` : isAuto ? '진행한 작업 (선택)' : '진행한 작업'} />
               <Check ok={photos.length > 0} optional label={`사진 ${photos.length}장`} />
+              {photos.length > 0 && (
+                <li className="ml-6 text-[11px] text-gray-500">
+                  작업 전 {photos.filter((p) => p.phase === 'before').length}장 · 작업 후 {photos.filter((p) => p.phase === 'after').length}장
+                </li>
+              )}
+              <Check ok={materialRows.length > 0} optional label={`사용 자재 ${cleanMaterials(materialRows).length}종`} />
+              {canRate && <Check ok={rating != null} optional label={rating ? `작업 평점 ${rating}점` : '작업 평점'} />}
               <Check
                 ok={isAuto ? process && processTo > process.progress : to != null && to > current}
                 optional
@@ -569,7 +674,7 @@ export default function ReportFormPage() {
               {create.isPending ? '제출 중…' : '보고 제출'}
             </button>
             <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
-              제출하면 현장 관리자와 본사가 검토해요. 본사 없이 운영하는 현장의 관리자가 올린 보고는 바로 승인돼요.
+              제출하면 현장 관리자와 본사가 검토해요. 승인 전에는 진행률과 자재 재고가 변경되지 않습니다. 본사 없이 운영하는 현장의 관리자가 올린 보고는 바로 승인돼요.
             </p>
           </Card>
         </aside>

@@ -29,9 +29,17 @@ function ReviewPanelBody({ report, onReviewed }) {
 
   const photos = report.photos?.length
     ? report.photos
-    : (report.photoUris ?? []).map((url) => ({ url, takenAt: null, latitude: null, longitude: null }));
+    : (report.photoUris ?? []).map((url) => ({ url, takenAt: null, latitude: null, longitude: null, phase: null }));
   const viewerItems = photos.map((p) => ({ ...p, caption: workSummary(report.work, report.processName) }));
   const status = report.review?.status;
+  const hasPhotoPhase = photos.some((photo) => photo.phase === 'before' || photo.phase === 'after');
+  const photoGroups = hasPhotoPhase
+    ? [
+        { key: 'before', label: '작업 전', items: photos.map((photo, index) => ({ photo, index })).filter(({ photo }) => photo.phase === 'before') },
+        { key: 'after', label: '작업 후', items: photos.map((photo, index) => ({ photo, index })).filter(({ photo }) => photo.phase !== 'before') },
+      ]
+    : [{ key: 'general', label: '현장 사진', items: photos.map((photo, index) => ({ photo, index })) }];
+  const photoWarning = (report.checks ?? []).some((check) => ['old_photo', 'far_photo'].includes(check.type));
 
   const submit = (nextStatus) => {
     setError(null);
@@ -73,26 +81,32 @@ function ReviewPanelBody({ report, onReviewed }) {
       </div>
 
       {photos.length > 0 && (
-        <div className="grid grid-cols-2 gap-2">
-          {photos.slice(0, 4).map((p, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setViewerIndex(i)}
-              className="group relative aspect-[4/3] overflow-hidden rounded-lg bg-gray-100"
-            >
-              <img src={p.url} alt={`현장 사진 ${i + 1}`} className="h-full w-full object-cover" />
-              <span className="absolute bottom-1.5 left-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                {p.takenAt ? `${formatTime(p.takenAt)} 촬영` : '촬영 시각 없음'}
-                {p.latitude == null && ' · 위치 없음'}
-              </span>
-              {i === 3 && photos.length > 4 && (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-bold text-white">
-                  +{photos.length - 4}
-                </span>
-              )}
-            </button>
+        <div className="space-y-3">
+          {photoGroups.filter((group) => group.items.length > 0).map((group) => (
+            <section key={group.key}>
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="text-[12px] font-bold text-gray-700">{group.label}</p>
+                <span className="tabular text-[10px] text-gray-400">{group.items.length}장</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {group.items.map(({ photo, index }) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setViewerIndex(index)}
+                    className="group relative aspect-[4/3] overflow-hidden rounded-lg bg-gray-100"
+                  >
+                    <img src={photo.url} alt={`${group.label} 사진 ${index + 1}`} className="h-full w-full object-cover transition group-hover:scale-[1.02]" />
+                    <span className="absolute bottom-1.5 left-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      {photo.takenAt ? `${formatTime(photo.takenAt)} 촬영` : '촬영 시각 없음'}
+                      {photo.latitude == null && ' · 위치 없음'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
           ))}
+          {photoWarning && <p className="rounded-lg bg-bad-soft px-2.5 py-1.5 text-[11px] text-bad">촬영 시각 또는 위치 이상이 감지된 사진이 있습니다. 아래 자동 검사 결과를 확인해 주세요.</p>}
         </div>
       )}
 
@@ -110,6 +124,38 @@ function ReviewPanelBody({ report, onReviewed }) {
           {report.processName} 공정 {report.processFrom?.toFixed(1)}% → {report.processTo.toFixed(1)}% (가중치로 전체
           진행률 자동 계산)
         </p>
+      )}
+
+      <p className="rounded-lg bg-brand-soft px-3 py-2 text-[11px] text-[#725300]">
+        현재 실제 진행률은 승인 전까지 바뀌지 않습니다. 위 값은 작성자가 제안한 변경 전·후 진행률이며 승인 시 반영됩니다.
+      </p>
+
+      {report.rating != null && (
+        <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2.5">
+          <span className="text-[12px] text-gray-500">작성자가 입력한 오늘 작업 평점</span>
+          <strong className="tabular text-[14px] text-gray-900">★ {Number(report.rating).toFixed(1)} / 5.0</strong>
+        </div>
+      )}
+
+      {report.materialUsages?.length > 0 && (
+        <div className="rounded-lg border border-line p-3">
+          <p className="text-[12px] font-bold text-gray-800">오늘 사용한 자재</p>
+          <ul className="mt-2 divide-y divide-line">
+            {report.materialUsages.map((material, index) => (
+              <li key={`${material.name}-${material.unit}-${index}`} className="flex justify-between gap-3 py-1.5 text-[12px]">
+                <span className="text-gray-700">{material.name}</span>
+                <strong className="tabular text-gray-900">{material.quantity} {material.unit}</strong>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-gray-500">
+            {status === REVIEW_STATUS.APPROVED
+              ? '승인이 완료되어 현장 재고에서 차감되었습니다.'
+              : status === REVIEW_STATUS.REVISION
+                ? '보완 요청 상태이므로 현장 재고에서 차감되지 않았습니다.'
+                : '승인되면 현장 재고에서 차감됩니다.'}
+          </p>
+        </div>
       )}
 
       <ReportChecks checks={report.checks} />

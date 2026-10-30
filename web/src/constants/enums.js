@@ -36,7 +36,7 @@ export function homePathFor(role) {
 }
 
 // 보고 작성 제한 (서버 ReportService 와 동일)
-export const REPORT_LIMITS = Object.freeze({ WORK_MAX: 100, PHOTOS_MAX: 10, FILES_MAX: 5 });
+export const REPORT_LIMITS = Object.freeze({ WORK_MAX: 100, FILES_MAX: 5 }); // 사진은 장수 제한 없음
 // 첨부 가능한 문서 (서버 FileStorage.checkDocument)
 export const REPORT_DOC_ACCEPT = '.pdf,.xls,.xlsx,.csv,.hwp,.hwpx,.doc,.docx,.ppt,.pptx,.txt,.zip';
 // 사진 형식 (서버 FileStorage.PHOTO_TYPES)

@@ -8,6 +8,9 @@ export const sitesApi = {
   // 내가 참여한 현장 (현장 관리자 · 작업자)
   getMySites: () => (USE_DUMMY ? mockServer.getMySites() : http.get(ENDPOINTS.SITES.MINE).then((r) => r.data)),
 
+  createSite: (input) =>
+    USE_DUMMY ? mockServer.createSite(input) : http.post(ENDPOINTS.SITES.CREATE, input).then((r) => r.data),
+
   // 참여 전 미리보기 (잘못된 현장에 들어가지 않게 이름·관리자 확인)
   previewSite: (code) =>
     USE_DUMMY ? mockServer.previewSite(code) : http.get(ENDPOINTS.SITES.PREVIEW(code)).then((r) => r.data),
@@ -19,6 +22,11 @@ export const sitesApi = {
   getSite: (siteId) =>
     USE_DUMMY ? mockServer.getSite(siteId) : http.get(ENDPOINTS.SITES.DETAIL(siteId)).then((r) => r.data),
 
+  setSiteMaterials: (siteId, materials) =>
+    USE_DUMMY
+      ? mockServer.setSiteMaterials(siteId, materials)
+      : http.put(ENDPOINTS.SITES.STOCK(siteId), { materials }).then((r) => r.data),
+
   getReportPage: (siteId, { cursor = null, size = REPORT_PAGE_SIZE } = {}) => {
     if (USE_DUMMY) return mockServer.getSiteReportPage(siteId, cursor, size);
     const params = { size };
@@ -29,9 +37,14 @@ export const sitesApi = {
   getMaterials: (siteId) =>
     USE_DUMMY ? mockServer.getSiteMaterials(siteId) : http.get(ENDPOINTS.SITES.MATERIALS(siteId)).then((r) => r.data),
 
+  createMaterialRequest: (siteId, input) =>
+    USE_DUMMY
+      ? mockServer.createMaterialRequest(siteId, input)
+      : http.post(ENDPOINTS.SITES.MATERIALS(siteId), input).then((r) => r.data),
+
   /**
    * 보고 제출 (서버 ReportController.create, multipart/form-data)
-   * input: { work, to?, processKey?, processTo?, memo, workLog, photos: File[], files: File[], location? }
+   * input: { work, to?, processKey?, processTo?, memo, workLog, photos: File[], photoPhases: string[], rating?, materials?, files: File[], location? }
    * 사진의 촬영 시각·위치(EXIF)는 서버가 사진 파일에서 직접 읽는다 → 원본 파일을 그대로 보낸다.
    */
   createReport: (siteId, input) => {
@@ -46,7 +59,12 @@ export const sitesApi = {
     }
     form.append('memo', input.memo ?? '');
     form.append('workLog', JSON.stringify(input.workLog));
-    input.photos.forEach((f) => form.append('photos', f, f.name));
+    input.photos.forEach((f, index) => {
+      form.append('photos', f, f.name);
+      form.append('photoPhases', input.photoPhases?.[index] ?? 'after');
+    });
+    if (input.rating != null) form.append('rating', String(input.rating));
+    if (input.materials?.length) form.append('materials', JSON.stringify(input.materials));
     input.files.forEach((f) => form.append('files', f, f.name));
     if (input.location) {
       form.append('latitude', String(input.location.latitude));

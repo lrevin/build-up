@@ -15,6 +15,18 @@ export const useSiteMaterials = (siteId) =>
     enabled: !!siteId,
   });
 
+export function useCreateMaterialRequest(siteId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => sitesApi.createMaterialRequest(siteId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.materials(siteId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.my.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.hq.all });
+    },
+  });
+}
+
 // 참여 코드로 현장 참여 → 내 현장 목록 다시 불러오기
 export function useJoinSite() {
   const queryClient = useQueryClient();

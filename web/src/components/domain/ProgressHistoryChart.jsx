@@ -2,15 +2,16 @@ import { useMemo } from 'react';
 import { formatMonthDay, formatPercent } from '../../services/format';
 import { REVIEW_STATUS } from '../../constants/enums';
 
-// 보고마다 입력된 현장 전체 진행률(to)의 추이. 검토 대기 보고는 노란 점으로 표시.
-// (V9 이후 진행률은 공정 가중치 합산이 아니라 보고자가 직접 입력하는 값)
+// 승인된 보고만 실제 진행률 추이에 포함한다. 대기·보완 요청 값은 검토 패널에서 제안값으로만 보여 준다.
 const W = 640;
 const H = 180;
 const PAD = { top: 12, right: 12, bottom: 24, left: 36 };
 
 export default function ProgressHistoryChart({ reports }) {
   const points = useMemo(() => {
-    const sorted = [...reports].sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1));
+    const sorted = reports
+      .filter((report) => report.review?.status === REVIEW_STATUS.APPROVED)
+      .sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1));
     if (sorted.length === 0) return [];
     const t0 = new Date(sorted[0].createdAt).getTime();
     const t1 = new Date(sorted[sorted.length - 1].createdAt).getTime();
@@ -23,7 +24,6 @@ export default function ProgressHistoryChart({ reports }) {
       y: PAD.top + ih - (r.to / 100) * ih,
       to: r.to,
       date: r.createdAt,
-      pending: r.review?.status === REVIEW_STATUS.PENDING,
     }));
   }, [reports]);
 
@@ -55,8 +55,8 @@ export default function ProgressHistoryChart({ reports }) {
           key={p.id}
           cx={p.x}
           cy={p.y}
-          r={p.pending ? 4.5 : 3}
-          fill={p.pending ? '#f5b400' : '#121823'}
+          r={3}
+          fill="#121823"
           stroke="#fff"
           strokeWidth="1.5"
         >

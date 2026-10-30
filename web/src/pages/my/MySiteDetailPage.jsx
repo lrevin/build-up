@@ -11,6 +11,8 @@ import ReportReviewPanel from '../../components/domain/ReportReviewPanel';
 import PhotoTimeline from '../../components/domain/PhotoTimeline';
 import MaterialDetail, { MaterialListItem } from '../../components/domain/MaterialDetail';
 import WorklogExport from '../../components/domain/WorklogExport';
+import SiteStockPanel from '../../components/domain/SiteStockPanel';
+import MaterialRequestForm from '../../components/domain/MaterialRequestForm';
 import { useSite, useSiteReports } from '../../hooks/queries/useSiteQueries';
 import { useSiteMaterials } from '../../hooks/queries/useMyQueries';
 import { flattenPages } from '../../hooks/queries/useHqQueries';
@@ -173,9 +175,17 @@ export default function MySiteDetailPage() {
       )}
 
       {tab === 'materials' && (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
-          <Card className="min-w-0">
-            <CardHeader title="자재 요청" subtitle="요청은 모바일 앱에서 작성해요" className="pb-2" />
+        <div className="space-y-4">
+          <SiteStockPanel site={site} editable={isOwner} />
+          <MaterialRequestForm
+            site={site}
+            onCreated={(created) => {
+              setSelectedMaterialId(created.id);
+            }}
+          />
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
+            <Card className="min-w-0">
+            <CardHeader title="자재 요청" subtitle="앱과 웹에서 작성한 요청을 함께 확인합니다" className="pb-2" />
             {materialsQuery.isPending ? (
               <LoadingBlock />
             ) : materialsQuery.isError ? (
@@ -196,15 +206,16 @@ export default function MySiteDetailPage() {
                 ))}
               </ul>
             )}
-          </Card>
-          <Card className="self-start xl:sticky xl:top-6">
+            </Card>
+            <Card className="self-start xl:sticky xl:top-6">
             <CardHeader title="요청 상세" className="pb-3" />
             {selectedMaterial ? (
               <MaterialDetail key={selectedMaterial.id} request={selectedMaterial} />
             ) : (
               <EmptyState title="자재 요청을 선택하세요." />
             )}
-          </Card>
+            </Card>
+          </div>
         </div>
       )}
 

@@ -59,16 +59,22 @@ export default function MySitesPage() {
         title={`${user?.name ?? ''}님의 현장`}
         subtitle={`${formatFullDate()} · 참여 현장 ${sites.length}곳${ownerCount ? ` (관리 ${ownerCount}곳)` : ''}`}
         right={
-          !empty &&
-          !joinOpen && (
-            <button
-              type="button"
-              onClick={() => setJoinOpen(true)}
-              className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-3 py-2 text-[13px] font-bold text-gray-800 hover:bg-gray-50"
-            >
-              <Icon name="plus" size={14} strokeWidth={2.4} /> 참여 코드 입력
-            </button>
-          )
+          <div className="flex gap-2">
+            {user?.role === USER_ROLE.ADMIN && (
+              <Link to="/my/sites/new" className="inline-flex items-center gap-1 rounded-lg bg-brand px-3 py-2 text-[13px] font-bold text-gray-900 hover:bg-brand-strong">
+                <Icon name="plus" size={14} strokeWidth={2.4} /> 새 현장
+              </Link>
+            )}
+            {!empty && !joinOpen && (
+              <button
+                type="button"
+                onClick={() => setJoinOpen(true)}
+                className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-3 py-2 text-[13px] font-bold text-gray-800 hover:bg-gray-50"
+              >
+                <Icon name="plus" size={14} strokeWidth={2.4} /> 참여 코드 입력
+              </button>
+            )}
+          </div>
         }
       />
 
