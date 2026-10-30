@@ -129,10 +129,9 @@ export default function ReportFormPage() {
     const incoming = [...list];
     const rejected = incoming.filter((f) => !(f.type.startsWith('image/') || PHOTO_EXT.test(f.name)) || f.size > MAX_FILE_BYTES);
     const ok = incoming.filter((f) => !rejected.includes(f));
-    const room = REPORT_LIMITS.PHOTOS_MAX - photos.length;
+    // 사진 장수 제한 없음(앱·서버와 같음). 한 장당 20MB까지
     if (rejected.length) toast.show(`사진(jpg·png·webp·heic, 20MB 이하)만 올릴 수 있어요. ${rejected.length}개 제외`, 'error');
-    if (ok.length > room) toast.show(`사진은 최대 ${REPORT_LIMITS.PHOTOS_MAX}장이에요. ${ok.length - room}장 제외`, 'error');
-    const added = ok.slice(0, Math.max(0, room)).map((file) => ({
+    const added = ok.map((file) => ({
       id: `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`,
       file,
       url: URL.createObjectURL(file),
@@ -297,7 +296,7 @@ export default function ReportFormPage() {
                   </p>
                 </Section>
 
-                <Section step={3} title="작업 전·후 사진" hint={`${photos.length}/${REPORT_LIMITS.PHOTOS_MAX}장 · 촬영 시각·위치는 사진 정보(EXIF)에서 자동으로 읽어요`}>
+                <Section step={3} title="작업 전·후 사진" hint={`${photos.length}장 · 장수 제한 없음 · 촬영 시각·위치는 사진 정보(EXIF)에서 자동으로 읽어요`}>
                   <div className="mb-3 grid grid-cols-2 gap-2" role="tablist" aria-label="사진 구분">
                     {[
                       ['before', '작업 전'],
@@ -360,7 +359,6 @@ export default function ReportFormPage() {
                       <button
                         type="button"
                         onClick={() => photoInput.current?.click()}
-                        disabled={photos.length >= REPORT_LIMITS.PHOTOS_MAX}
                         className="rounded-lg border border-line bg-white px-3 py-1.5 text-[13px] font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-50"
                       >
                         사진 선택
