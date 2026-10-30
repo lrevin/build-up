@@ -10,6 +10,7 @@ import { useToast } from '../common/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { REVIEW_COMMENT_MAX, REVIEW_STATUS, WEATHER_LABEL } from '../../constants/enums';
 import { formatDateTime, formatDelta, formatRelative, formatTime, workLines, workSummary } from '../../services/format';
+import RatingStars from './RatingStars';
 
 // 보고 상세 + 승인 / 보완 요청 (계획서 화면 3 오른쪽 패널)
 export default function ReportReviewPanel({ report, onReviewed }) {
@@ -133,7 +134,10 @@ function ReviewPanelBody({ report, onReviewed }) {
       {report.rating != null && (
         <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2.5">
           <span className="text-[12px] text-gray-500">작성자가 입력한 오늘 작업 평점</span>
-          <strong className="tabular text-[14px] text-gray-900">★ {Number(report.rating).toFixed(1)} / 5.0</strong>
+          <span className="flex items-center gap-2">
+            <RatingStars value={Number(report.rating)} size={16} />
+            <strong className="tabular text-[14px] text-gray-900">{Number(report.rating).toFixed(1)} / 5.0</strong>
+          </span>
         </div>
       )}
 
