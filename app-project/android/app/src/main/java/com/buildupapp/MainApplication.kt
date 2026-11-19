@@ -14,8 +14,8 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
+          // 음성 안내(TTS): 새 보고·보고 완료를 소리로 알려 준다
+          add(TtsPackage())
         },
     )
   }

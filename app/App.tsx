@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/auth';
 import { DialogProvider, useDialog } from './src/components/Dialog';
 import { PushData, listenPush, registerPush } from './src/push';
+import { speechForPush, tts } from './src/tts';
 import { Logo } from './src/components/ui';
 import { RootStackParamList } from './src/navigation';
 import { KakaoSignup } from './src/types';
@@ -188,7 +189,14 @@ function PushBridge() {
       }
     };
     return listenPush(
-      (title, body) => dialog.toast(body ? `${title}\n${body}` : title),
+      (title, body) => {
+        dialog.toast(body ? `${title}\n${body}` : title);
+        // 음성 안내: 새 보고·보완 완료·승인·보완 요청 알림을 소리로 읽기
+        const line = speechForPush(title, body);
+        if (line) {
+          tts.speak(line);
+        }
+      },
       data => open(data),
     );
   }, [userId, isHq, dialog]);

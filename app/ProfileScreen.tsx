@@ -1,6 +1,13 @@
 // 내 정보
-import React from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Switch,
+  View,
+} from 'react-native';
 import { Text } from '../components/Text';
 import { resetDemoData, withdraw } from '../api/buildup';
 import { config, errorMessage } from '../api/client';
@@ -11,11 +18,14 @@ import { AppHeader, Avatar, Button, Card } from '../components/ui';
 import { POLICY_OPERATOR } from '../data/policies';
 import { ScreenProps } from '../navigation';
 import { colors, shadow } from '../theme';
+import { tts } from '../tts';
 
 export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
   const user = useUser();
   const { logout } = useAuth();
   const dialog = useDialog();
+  // 음성 안내(TTS): 보고 제출·새 보고·검토 결과를 소리로 읽어 줌
+  const [voice, setVoice] = useState(tts.isEnabled());
   const roleLabel =
     user.role === 'hq'
       ? '본사 관계자'
@@ -168,6 +178,23 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
           <Text style={styles.managerDesc}>이메일 인증 후 새로 정하기</Text>
           <ChevronRight size={18} color={colors.textMuted} />
         </Pressable>
+        <View style={styles.connection}>
+          <Text style={[styles.managerText, styles.flex]}>음성 안내</Text>
+          <Text style={styles.managerDesc}>새 보고 · 보고 완료를 소리로</Text>
+          <Switch
+            value={voice}
+            onValueChange={on => {
+              setVoice(on);
+              tts.setEnabled(on);
+              if (on) {
+                tts.speak('음성 안내를 켰어요.');
+              }
+            }}
+            trackColor={{ true: colors.yellow, false: colors.border }}
+            thumbColor={colors.white}
+            accessibilityLabel="음성 안내"
+          />
+        </View>
         <Pressable
           style={styles.connection}
           onPress={() => navigation.navigate('Policy', { kind: 'terms' })}

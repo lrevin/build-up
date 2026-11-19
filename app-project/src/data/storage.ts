@@ -12,6 +12,7 @@ const KEYS = {
   draft: (userId: string, siteId: string) => `draft:${userId}:${siteId}-v2`,
   seen: (userId: string) => `seen-reports:${userId}`, // { 현장 id: 마지막으로 본 시각 }
   kakao: 'kakao-login', // 진행 중인 카카오 로그인 { key, startedAt }
+  tts: 'tts-enabled', // 음성 안내 켜짐/꺼짐
 };
 
 async function readJson<T>(key: string): Promise<T | null> {
@@ -25,6 +26,13 @@ async function readJson<T>(key: string): Promise<T | null> {
 
 const writeJson = (key: string, value: unknown) =>
   store.setItem(key, JSON.stringify(value)).catch(() => {});
+
+// ---- 음성 안내(TTS) 켜짐/꺼짐 ----
+
+export const ttsStore = {
+  load: async () => (await readJson<boolean>(KEYS.tts)) ?? true, // 처음엔 켜짐
+  save: (on: boolean) => writeJson(KEYS.tts, on),
+};
 
 // ---- 서버 연결 설정 ----
 

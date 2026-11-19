@@ -71,6 +71,7 @@ import { ScreenProps } from '../navigation';
 import { colors, radius } from '../theme';
 import { MaterialRequest, PhotoPhase, PickedFile, Site } from '../types';
 import { draftStore } from '../data/storage';
+import { tts } from '../tts';
 import { formatDate, formatTime, isToday, pct } from '../utils/format';
 
 const STEP = 1;
@@ -684,6 +685,13 @@ export default function ReportScreen({
       setRestoredAt(null);
       draftStore.clear(user.id, site.id);
       setSheetOpen(false);
+      tts.speak(
+        approved
+          ? `보고를 제출했어요. ${isAuto ? '현장 전체 ' : ''}진행률이 ${pct(
+              overallAfter,
+            )}가 됐어요.`
+          : '보고를 제출했어요. 관리자가 승인하면 진행률에 반영돼요.',
+      );
       const next = await dialog.show({
         icon: 'success',
         title: '보고를 제출했어요',
