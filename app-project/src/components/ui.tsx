@@ -15,7 +15,7 @@ import {
 import { Text } from './Text';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, shadow } from '../theme';
+import { colors, pressedRaised, radius, raised, shadow } from '../theme';
 
 // ---- 버튼 ----
 
@@ -310,15 +310,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  primary: { backgroundColor: colors.yellow },
-  dark: { backgroundColor: colors.navy },
-  outline: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  btnOff: { opacity: 0.4 },
-  btnPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
+  primary: { ...raised.primary },
+  dark: { ...raised.dark },
+  outline: { ...raised.outline },
+  btnOff: { opacity: 0.4, elevation: 0, shadowOpacity: 0 },
+  btnPressed: { ...pressedRaised },
   btnText: {
     fontSize: 16,
     fontWeight: '700',

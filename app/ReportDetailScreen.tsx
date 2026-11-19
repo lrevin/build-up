@@ -52,7 +52,7 @@ const infoStyles = StyleSheet.create({
   empty: { color: colors.textMuted, fontWeight: '400' },
 });
 import { ScreenProps } from '../navigation';
-import { colors, radius } from '../theme';
+import { colors, radius, raised } from '../theme';
 import { formatDate, formatTime, pct } from '../utils/format';
 
 const GRID_GAP = 6;
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
   },
   smallGhost: { borderWidth: 1, borderColor: colors.border },
   smallGhostText: { fontSize: 14, fontWeight: '600', color: colors.textSub },
-  smallPrimary: { backgroundColor: colors.yellow },
+  smallPrimary: { ...raised.primary },
   smallPrimaryText: { fontSize: 14, fontWeight: '700', color: colors.navy },
   memo: { fontSize: 15, color: colors.text, lineHeight: 23 },
   fileRow: {
