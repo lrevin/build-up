@@ -26,6 +26,45 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
   const dialog = useDialog();
   // 음성 안내(TTS): 보고 제출·새 보고·검토 결과를 소리로 읽어 줌
   const [voice, setVoice] = useState(tts.isEnabled());
+  const [voiceName, setVoiceName] = useState(tts.voice());
+
+  // 목소리 고르기: 고르면 바로 들려준다
+  const onPickVoice = async () => {
+    const list = await tts.voices();
+    if (!list.length) {
+      dialog.notice({
+        icon: 'danger',
+        title: '목소리를 불러오지 못했어요',
+        message:
+          '휴대폰 설정 → 텍스트 음성 변환에서 한국어 음성을 설치해 주세요.',
+      });
+      return;
+    }
+    const pick = await dialog.choose<string>({
+      title: '목소리 고르기',
+      message: '고르면 바로 들려 드려요. 고품질 목소리는 인터넷이 필요해요.',
+      options: [
+        {
+          label: '자동 (가장 자연스러운 목소리)',
+          value: '',
+        },
+        ...list.map((v, i) => ({
+          label: `목소리 ${i + 1}${v.network ? ' · 고품질' : ' · 기기 음성'}`,
+          description: v.network
+            ? '신경망 음성 · 인터넷 필요(없으면 기기 음성으로)'
+            : '인터넷 없이도 읽어요',
+          value: v.name,
+        })),
+      ],
+    });
+    if (pick === null) {
+      return;
+    }
+    const next = pick || null;
+    tts.setVoice(next);
+    setVoiceName(next);
+    tts.speak('세종 물류센터 증축공사에 새 보고가 들어왔어요.');
+  };
   const roleLabel =
     user.role === 'hq'
       ? '본사 관계자'
@@ -195,6 +234,15 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
             accessibilityLabel="음성 안내"
           />
         </View>
+        {voice ? (
+          <Pressable style={styles.connection} onPress={onPickVoice}>
+            <Text style={styles.managerText}>목소리</Text>
+            <Text style={styles.managerDesc} numberOfLines={1}>
+              {voiceName ? '직접 고름' : '자동 (가장 자연스러운 목소리)'}
+            </Text>
+            <ChevronRight size={18} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
         <Pressable
           style={styles.connection}
           onPress={() => navigation.navigate('Policy', { kind: 'terms' })}
