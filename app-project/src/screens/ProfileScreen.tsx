@@ -63,7 +63,7 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
     const next = pick || null;
     tts.setVoice(next);
     setVoiceName(next);
-    tts.speak('세종 물류센터 증축공사에 새 보고가 들어왔어요.');
+    tts.speak('새 보고가 도착했습니다.');
   };
   const roleLabel =
     user.role === 'hq'
@@ -226,7 +226,7 @@ export default function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
               setVoice(on);
               tts.setEnabled(on);
               if (on) {
-                tts.speak('음성 안내를 켰어요.');
+                tts.speak('음성 안내를 켰습니다.');
               }
             }}
             trackColor={{ true: colors.yellow, false: colors.border }}

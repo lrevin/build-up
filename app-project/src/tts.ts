@@ -68,20 +68,17 @@ export const tts = {
   },
 };
 
-/** 알림 제목(서버 Notices.java: "새 현장 보고 · 현장명" 등)으로 읽을 문장을 만든다. 읽을 알림이 아니면 null */
-export function speechForPush(title: string, body: string): string | null {
-  const [kind, ...rest] = title.split(' · ');
-  const site = rest.join(' · ');
-  const who = body.split(' · ')[0];
-  switch (kind) {
+/** 알림 제목(서버 Notices.java: "새 현장 보고 · 현장명" 등)으로 읽을 짧은 문장. 읽을 알림이 아니면 null */
+export function speechForPush(title: string): string | null {
+  switch (title.split(' · ')[0]) {
     case '새 현장 보고':
-      return `${site}에 새 보고가 들어왔어요. ${who}님의 보고예요.`;
+      return '새 보고가 도착했습니다.';
     case '보완 완료':
-      return `${site}, ${who}님이 보고를 보완해서 다시 올렸어요.`;
+      return '보완 보고가 도착했습니다.';
     case '보고 승인':
-      return `${site} 보고가 승인됐어요.`;
+      return '보고가 승인되었습니다.';
     case '보완 요청':
-      return `${site} 보고에 보완 요청이 왔어요.`;
+      return '보완 요청이 도착했습니다.';
     default:
       return null;
   }

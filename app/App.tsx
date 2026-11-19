@@ -192,7 +192,7 @@ function PushBridge() {
       (title, body) => {
         dialog.toast(body ? `${title}\n${body}` : title);
         // 음성 안내: 새 보고·보완 완료·승인·보완 요청 알림을 소리로 읽기
-        const line = speechForPush(title, body);
+        const line = speechForPush(title);
         if (line) {
           tts.speak(line);
         }
