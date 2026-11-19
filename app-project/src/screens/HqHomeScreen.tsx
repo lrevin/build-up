@@ -206,7 +206,7 @@ export function SiteTile({
       }건`}
     >
       <View style={styles.tileIcon}>
-        <Building2 size={22} color={colors.text} strokeWidth={1.8} />
+        <Building2 size={22} color={colors.navy} strokeWidth={2} />
       </View>
       <View style={styles.badges}>
         {unread > 0 ? (
@@ -231,6 +231,19 @@ export function SiteTile({
         <Text style={styles.tileProgress}>
           진행률 {pct(site.overallProgress)}
         </Text>
+        <View style={styles.tileTrack}>
+          <View
+            style={[
+              styles.tileFill,
+              {
+                width: `${Math.max(
+                  0,
+                  Math.min(100, site.overallProgress ?? 0),
+                )}%`,
+              },
+            ]}
+          />
+        </View>
       </View>
     </Pressable>
   );
@@ -238,7 +251,7 @@ export function SiteTile({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  pressed: { opacity: 0.8 },
+  pressed: { opacity: 0.9, transform: [{ scale: 0.97 }] },
   topBar: { backgroundColor: colors.background },
   topRow: {
     height: 56,
@@ -280,7 +293,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.fill,
+    backgroundColor: colors.yellowSoft,
+    borderWidth: 1,
+    borderColor: '#F6DE9C',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -308,6 +323,13 @@ const styles = StyleSheet.create({
   },
   tileType: { fontSize: 13, color: colors.textSub, marginTop: 3 },
   tileProgress: { fontSize: 13, fontWeight: '600', color: colors.textSub },
+  tileTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.track,
+    overflow: 'hidden',
+  },
+  tileFill: { height: '100%', borderRadius: 3, backgroundColor: colors.yellow },
 
   empty: { alignItems: 'center', marginTop: 32, gap: 12 },
   emptyIcon: {

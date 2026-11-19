@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { isListedWorkType, searchWorkTypes } from '../data/workTypes';
-import { colors, radius } from '../theme';
+import { colors, radius, raised } from '../theme';
 import { Text } from './Text';
 
 const MAX_LEN = 50;
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   },
   btnGhost: { borderWidth: 1, borderColor: colors.border },
   btnGhostText: { fontSize: 15, fontWeight: '700', color: colors.textSub },
-  btnPrimary: { flex: 1, backgroundColor: colors.yellow },
+  btnPrimary: { flex: 1, ...raised.primary },
   btnPrimaryText: { fontSize: 15, fontWeight: '800', color: colors.navy },
   btnDisabled: { opacity: 0.4 },
 });

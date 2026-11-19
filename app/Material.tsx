@@ -2,7 +2,7 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Building2, CalendarClock, Siren } from 'lucide-react-native';
-import { colors, radius, shadow } from '../theme';
+import { colors, radius, shadow, raised } from '../theme';
 import { MaterialItem, MaterialRequest, MaterialStatus } from '../types';
 import { formatTime } from '../utils/format';
 import { daysBetween, parseYMD } from '../utils/plan';
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionPrimary: { backgroundColor: colors.yellow },
+  actionPrimary: { ...raised.primary },
   actionText: { fontSize: 15, fontWeight: '700', color: colors.text },
   pressed: { opacity: 0.8 },
 });

@@ -12,7 +12,7 @@ import { Text } from './Text';
 import { errorMessage } from '../api/client';
 import { useDialog } from './Dialog';
 import { CodeSent } from '../types';
-import { colors, radius } from '../theme';
+import { colors, radius, raised } from '../theme';
 
 interface Props {
   label: string;
@@ -281,9 +281,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendBtn: { backgroundColor: colors.navy },
+  sendBtn: { ...raised.dark },
   sendText: { color: colors.white, fontSize: 14, fontWeight: '700' },
-  okBtn: { backgroundColor: colors.yellow },
+  okBtn: { ...raised.primary },
   okText: { color: colors.navy, fontSize: 14, fontWeight: '700' },
   doneBadge: { backgroundColor: '#E7F6EE' },
   doneText: { color: colors.success, fontSize: 14, fontWeight: '700' },

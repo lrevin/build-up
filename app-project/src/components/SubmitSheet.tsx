@@ -15,7 +15,7 @@ import {
   Paperclip,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius } from '../theme';
+import { colors, radius, raised } from '../theme';
 import { splitWorks } from '../utils/works';
 
 interface Props {
@@ -254,6 +254,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.85 },
   btnCancel: { flex: 1, backgroundColor: colors.fill },
   btnCancelText: { fontSize: 16, fontWeight: '600', color: colors.textSub },
-  btnPrimary: { flex: 2, backgroundColor: colors.yellow },
+  btnPrimary: { flex: 2, ...raised.primary },
   btnPrimaryText: { fontSize: 16, fontWeight: '700', color: colors.navy },
 });

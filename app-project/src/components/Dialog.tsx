@@ -31,7 +31,7 @@ import {
   TriangleAlert,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius } from '../theme';
+import { colors, radius, raised } from '../theme';
 
 // ---- 타입 ----
 
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primary: { backgroundColor: colors.yellow },
+  primary: { ...raised.primary },
   secondary: { backgroundColor: colors.fill },
   danger: { backgroundColor: colors.danger },
   actionText: { fontSize: 16, fontWeight: '700', color: colors.navy },

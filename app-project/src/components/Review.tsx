@@ -15,7 +15,7 @@ import {
 } from 'lucide-react-native';
 import { reviewReport } from '../api/buildup';
 import { errorMessage } from '../api/client';
-import { colors, radius } from '../theme';
+import { colors, radius, raised } from '../theme';
 import { Report, ReportCheck, ReviewStatus } from '../types';
 import { formatDate, formatTime } from '../utils/format';
 import { useDialog } from './Dialog';
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   ghost: { borderWidth: 1, borderColor: colors.border },
   ghostText: { fontSize: 15, fontWeight: '700', color: colors.textSub },
-  approve: { backgroundColor: colors.yellow },
+  approve: { ...raised.primary },
   approveText: { fontSize: 15, fontWeight: '800', color: colors.navy },
   revision: { flex: 1, backgroundColor: '#C26D00' },
   revisionText: { fontSize: 15, fontWeight: '800', color: colors.white },

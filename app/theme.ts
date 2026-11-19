@@ -32,13 +32,57 @@ export const colors = {
 
 export const radius = { sm: 10, md: 14, lg: 20 };
 
-// 카드·상자에 쓰는 아주 옅은 그림자(떠 있는 느낌만)
+// 카드·상자에 쓰는 그림자(바탕에서 떠 있는 느낌)
 export const shadow = {
   shadowColor: '#1B2333',
-  shadowOpacity: 0.06,
-  shadowRadius: 12,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 2,
+  shadowOpacity: 0.1,
+  shadowRadius: 16,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 4,
+};
+
+// 버튼 입체감: 아래쪽 진한 테두리(두께) + 같은 색 계열 그림자. 누르면 pressedRaised로 눌린 모양
+export const raised = {
+  primary: {
+    backgroundColor: '#F9B51D',
+    borderBottomWidth: 4,
+    borderBottomColor: '#D3950A',
+    shadowColor: '#E0A200',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 6,
+  },
+  dark: {
+    backgroundColor: '#121722',
+    borderBottomWidth: 4,
+    borderBottomColor: '#000000',
+    shadowColor: '#121722',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 6,
+  },
+  outline: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E7EC',
+    borderBottomWidth: 3,
+    borderBottomColor: '#CDD2DA',
+    shadowColor: '#1B2333',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+};
+
+// 눌렀을 때: 두께가 줄고 살짝 내려가며 그림자가 작아진다
+export const pressedRaised = {
+  borderBottomWidth: 1,
+  transform: [{ translateY: 3 }],
+  shadowOpacity: 0.15,
+  elevation: 1,
 };
 
 // 여백 규칙: 화면 좌우·카드 안쪽은 모두 gutter(20)로 맞춘다
