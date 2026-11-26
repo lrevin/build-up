@@ -83,7 +83,7 @@ public class DemoDataSeeder implements CommandLineRunner {
 
     /**
      * 개발·시연용 인테리어 현장. 참여 코드는 000000으로 고정(재발급 불가)이고, 지워져도 서버를 켜면 다시 생긴다.
-     * 관리자 이영호(admin@), 작업자 김철수(worker@)가 처음부터 참여. 진행률 0%에서 시작
+     * 관리자 이재빈(admin@), 작업자 김창원(worker@)가 처음부터 참여. 진행률 0%에서 시작
      */
     private void seedDemoInterior() {
         if (sites.findByCode(Site.DEMO_CODE).isPresent()) {
@@ -120,11 +120,11 @@ public class DemoDataSeeder implements CommandLineRunner {
         companies.save(hq);
 
         // 본사 관리자(HQ_MANAGER): 본사를 등록한 사람
-        User jung = user("정본사", "hq@buildup.kr", "010-7777-8888", Role.WORKER);
+        User jung = user("강건우", "hq@buildup.kr", "010-7777-8888", Role.WORKER);
         jung.joinCompany(hq, true);
         // 본사에 보고하는 현장 관리자(내 현장이 한빛건설 본사에 연결됨)
-        User admin = user("이영호", "admin@buildup.kr", "010-1234-5678", Role.ADMIN);
-        User kim = user("김현장", "worker@buildup.kr", "010-9876-5432", Role.WORKER);
+        User admin = user("이재빈", "admin@buildup.kr", "010-1234-5678", Role.ADMIN);
+        User kim = user("김창원", "worker@buildup.kr", "010-9876-5432", Role.WORKER);
         // 최고 책임자(본사 없음): 본인 현장을 운영하면서 한빛 현장에는 작업자로 참여
         User park = user("박철근", "park@buildup.kr", "010-2222-3333", Role.ADMIN);
         User choi = user("최전기", "choi@buildup.kr", "010-4444-5555", Role.WORKER);

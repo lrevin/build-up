@@ -45,9 +45,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 서버를 실제로 띄우고 HTTP로 주요 흐름을 시험한다(데모 데이터 기준).
- *   admin@buildup.kr  이영호: 한빛 오피스텔(현장 1) 총관리자, 한빛건설 본사에 보고
- *   worker@buildup.kr 김현장: 한빛 오피스텔 작업자
- *   hq@buildup.kr     정본사: 한빛건설 본사 관계자
+ *   admin@buildup.kr  이재빈: 한빛 오피스텔(현장 1) 총관리자, 한빛건설 본사에 보고
+ *   worker@buildup.kr 김창원: 한빛 오피스텔 작업자
+ *   hq@buildup.kr     강건우: 한빛건설 본사 관계자
  *   park@buildup.kr   박철근: 본인 현장의 최고 책임자, 한빛에서는 작업자
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -354,7 +354,7 @@ class ApiFlowTests {
     @Test
     void 카카오_이메일로_이미_가입한_계정은_자동으로_연결하지_않는다() throws Exception {
         when(kakao.fromAccessToken("kakao-token-admin"))
-                .thenReturn(new KakaoClient.KakaoUser("9002", "admin@buildup.kr", "이영호"));
+                .thenReturn(new KakaoClient.KakaoUser("9002", "admin@buildup.kr", "이재빈"));
         Res r = send("POST", "/api/auth/oauth/kakao", null, Map.of("accessToken", "kakao-token-admin"));
         assertThat(r.status()).isEqualTo(409);
         assertThat(r.body().get("message")).isEqualTo("이미 이메일로 가입된 계정이에요. 이메일로 로그인해 주세요.");
