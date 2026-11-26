@@ -42,12 +42,12 @@ const ymd = (d) =>
 // ───────── 고정 데이터 ─────────
 // 서버 AuthUserResponse 와 같은 칸 (hqCompanyId는 더미 내부용)
 const USERS = [
-  { id: 'u-hq', name: '김창원', email: 'hq@buildup.kr', phone: '010-1000-0001', role: 'hq', company: '한빛건설 본사', companyCode: '250901', hqName: null, hqRole: 'manager', canReviewReports: true, hqCompanyId: 'c-1' },
+  { id: 'u-hq', name: '강건우', email: 'hq@buildup.kr', phone: '010-1000-0001', role: 'hq', company: '한빛건설 본사', companyCode: '250901', hqName: null, hqRole: 'manager', canReviewReports: true, hqCompanyId: 'c-1' },
   { id: 'u-hq2', name: '오직원', email: 'hq2@buildup.kr', phone: '010-1000-0002', role: 'hq', company: '한빛건설 본사', companyCode: '250901', hqName: null, hqRole: 'member', canReviewReports: false, hqCompanyId: 'c-1' },
   { id: 'u-sys', name: '시스템 관리자', email: 'sys@buildup.kr', phone: '010-1000-0000', role: 'system', company: 'Build Up', companyCode: null, hqName: null, hqRole: null, canReviewReports: false },
-  { id: 'u-admin', name: '강건우', email: 'admin@buildup.kr', phone: '010-1234-5678', role: 'admin', company: '한빛건설', companyCode: null, hqName: '한빛건설 본사', hqRole: null, canReviewReports: false },
+  { id: 'u-admin', name: '이재빈', email: 'admin@buildup.kr', phone: '010-1234-5678', role: 'admin', company: '한빛건설', companyCode: null, hqName: '한빛건설 본사', hqRole: null, canReviewReports: false },
   { id: 'u-park', name: '박철근', email: 'park@buildup.kr', phone: '010-2222-3333', role: 'admin', company: '박철근 인력사무소', companyCode: null, hqName: null, hqRole: null, canReviewReports: false },
-  { id: 'u-w1', name: '김주안', email: 'worker@buildup.kr', phone: '010-3000-0001', role: 'worker', hqRole: null, canReviewReports: false },
+  { id: 'u-w1', name: '김창원', email: 'worker@buildup.kr', phone: '010-3000-0001', role: 'worker', hqRole: null, canReviewReports: false },
   { id: 'u-w2', name: '오철근', email: 'oh@buildup.kr', phone: '010-3000-0002', role: 'worker', hqRole: null, canReviewReports: false },
   { id: 'u-w3', name: '최전기', email: 'choi@buildup.kr', phone: '010-3000-0003', role: 'worker', hqRole: null, canReviewReports: false },
   { id: 'u-w4', name: '한설비', email: 'han@buildup.kr', phone: '010-3000-0004', role: 'worker', hqRole: null, canReviewReports: false },
@@ -295,7 +295,7 @@ function makeReports(plan, now, rand) {
       checks.push({ type: 'no_location', message: '제출 위치와 사진 위치 정보가 없어요.' });
     }
 
-    const reviewer = plan.companyId === null ? '박철근' : '김창원';
+    const reviewer = plan.companyId === null ? '박철근' : '강건우';
     let review;
     if (newestIndex < plan.pendingLast) {
       review = { status: 'pending', comment: null, reviewer: null, reviewedAt: null };
@@ -377,8 +377,8 @@ function makeMaterials(now) {
       id: 'm-3', siteId: 's-3', processKey: null, processName: null,
       items: [{ name: '레미콘 25-24-150', quantity: 60, unit: '㎥' }],
       neededBy: needBy(1), urgent: true, note: '증축동 기초 2차 타설. 펌프카 같이 예약 필요.',
-      status: 'requested', rejectReason: null, author: '김주안', authorId: 'u-w1', createdAt: t(0, 8),
-      timeline: [ev('requested', '김주안', false, t(0, 8))],
+      status: 'requested', rejectReason: null, author: '김창원', authorId: 'u-w1', createdAt: t(0, 8),
+      timeline: [ev('requested', '김창원', false, t(0, 8))],
     },
     {
       id: 'm-4', siteId: 's-1', processKey: 'electric', processName: '전기',
@@ -388,14 +388,14 @@ function makeMaterials(now) {
       ],
       neededBy: needBy(-2), urgent: false, note: '',
       status: 'approved', rejectReason: null, author: '최전기', authorId: 'u-w3', createdAt: t(5, 10),
-      timeline: [ev('requested', '최전기', false, t(5, 10)), ev('approved', '김창원', true, t(5, 15))],
+      timeline: [ev('requested', '최전기', false, t(5, 10)), ev('approved', '강건우', true, t(5, 15))],
     },
     {
       id: 'm-5', siteId: 's-4', processKey: 'interior', processName: '내장 마감',
       items: [{ name: '실크 벽지', quantity: 120, unit: '롤' }],
       neededBy: needBy(-1), urgent: false, note: '색상 A-203 동일 로트로 부탁드립니다.',
       status: 'rejected', rejectReason: '수량을 다시 확인해 주세요', author: '오철근', authorId: 'u-w2', createdAt: t(3, 11),
-      timeline: [ev('requested', '오철근', false, t(3, 11)), ev('rejected', '김창원', true, t(3, 16))],
+      timeline: [ev('requested', '오철근', false, t(3, 11)), ev('rejected', '강건우', true, t(3, 16))],
     },
     {
       id: 'm-6', siteId: 's-5', processKey: null, processName: null,

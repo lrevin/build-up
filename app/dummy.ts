@@ -210,17 +210,17 @@ function makeHistory(
 
 // ---- 처음 상태(데모 데이터) ----
 
-const KIM: [string, string] = ['u-worker', '김주안'];
+const KIM: [string, string] = ['u-worker', '김창원'];
 const PARK: [string, string] = ['u-w2', '박철근'];
 const CHOI: [string, string] = ['u-w3', '최전기'];
-const LEE: [string, string] = ['u-admin', '강건우'];
-const JUNG: [string, string] = ['u-hq', '김창원'];
+const LEE: [string, string] = ['u-admin', '이재빈'];
+const JUNG: [string, string] = ['u-hq', '강건우'];
 
 function makeSeed(): DummyState {
   const users: UserRow[] = [
     {
       id: 'u-hq',
-      name: '김창원',
+      name: '강건우',
       email: 'hq@buildup.kr',
       phone: '010-7777-8888',
       role: 'hq',
@@ -229,7 +229,7 @@ function makeSeed(): DummyState {
     },
     {
       id: 'u-admin',
-      name: '강건우',
+      name: '이재빈',
       email: 'admin@buildup.kr',
       phone: '010-1234-5678',
       role: 'admin',
@@ -239,7 +239,7 @@ function makeSeed(): DummyState {
     },
     {
       id: 'u-worker',
-      name: '김주안',
+      name: '김창원',
       email: 'worker@buildup.kr',
       phone: '010-9876-5432',
       role: 'worker',
