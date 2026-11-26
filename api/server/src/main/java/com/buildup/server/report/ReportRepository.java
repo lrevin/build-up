@@ -35,9 +35,15 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     @EntityGraph(attributePaths = {"author", "site"})
     @Query("select r from Report r where r.site.id in :siteIds"
             + " and (:processKey is null or r.processKey = :processKey)"
+            + " and (:ownerOnly = false or r.author = r.site.owner)"
             + " and (r.createdAt < :at or (r.createdAt = :at and r.id < :id))"
             + " order by r.createdAt desc, r.id desc")
-    List<Report> page(List<Long> siteIds, String processKey, Instant at, Long id, Limit limit);
+    List<Report> page(List<Long> siteIds, String processKey, boolean ownerOnly, Instant at, Long id, Limit limit);
+
+    /** 본사가 검토할 대기 보고 수: 현장 관리자가 올린 것만 */
+    @Query("select count(r) from Report r where r.site.id = :siteId and r.reviewStatus = :status"
+            + " and r.author = r.site.owner")
+    long countByOwnerAndStatus(Long siteId, String status);
 
     /** 공정별 보고 수(보고 이력 화면의 필터 숫자) */
     @Query("select r.processKey, count(r) from Report r where r.site.id = :siteId group by r.processKey")

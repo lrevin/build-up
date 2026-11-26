@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { CalendarDays, Plus, Siren, X } from 'lucide-react-native';
-import { fetchSite, requestMaterials } from '../api/buildup';
+import { fetchMaterials, fetchSite, requestMaterials } from '../api/buildup';
 import { useUser } from '../auth';
 import { errorMessage } from '../api/client';
 import { useDialog } from '../components/Dialog';
@@ -23,6 +23,7 @@ import { ScreenProps } from '../navigation';
 import { colors, radius } from '../theme';
 import { MaterialItem } from '../types';
 import { addDays, parseYMD, toYMD } from '../utils/plan';
+import { mergeItems, workerRequestsSinceMine } from '../utils/summary';
 
 // 자주 쓰는 자재(누르면 이름·단위가 채워진다)
 const PRESETS: { name: string; unit: string }[] = [
@@ -56,13 +57,54 @@ export default function MaterialRequestScreen({
   const dialog = useDialog();
   const user = useUser();
   const [isOwner, setIsOwner] = useState(false);
+  const [hqName, setHqName] = useState<string | null>(null);
   useEffect(() => {
     fetchSite(siteId)
       .then(s => {
         setIsOwner(s.ownerId === user.id);
+        setHqName(s.hqName);
       })
       .catch(() => {});
   }, [siteId, user.id]);
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
+
+  // 현장 관리자(본사 연결): 내가 승인한 작업자 요청을 합쳐서 본사에 요청한다
+  const loadWorkerRequests = async () => {
+    setLoadingWorkers(true);
+    try {
+      const list = workerRequestsSinceMine(
+        await fetchMaterials(siteId),
+        user.id,
+      );
+      if (!list.length) {
+        dialog.toast('본사에 올릴 승인된 작업자 요청이 없어요');
+        return;
+      }
+      const merged = mergeItems(list.map(m => m.items)).slice(
+        0,
+        MAX_MATERIAL_ITEMS,
+      );
+      setRows(
+        merged.map(i => ({
+          ...emptyRow(),
+          name: i.name,
+          qty: String(i.quantity),
+          unit: i.unit,
+        })),
+      );
+      setUrgent(list.some(m => m.urgent));
+      setNote(
+        `작업자 요청 ${list.length}건 정리 (${[
+          ...new Set(list.map(m => m.author)),
+        ].join(', ')})`,
+      );
+      dialog.toast(`작업자 요청 ${list.length}건을 불러왔어요`, 'success');
+    } catch (e) {
+      dialog.toast(errorMessage(e), 'error');
+    } finally {
+      setLoadingWorkers(false);
+    }
+  };
   const [rows, setRows] = useState<Row[]>([emptyRow()]);
   const [neededBy, setNeededBy] = useState<string | null>(null);
   const [urgent, setUrgent] = useState(false);
@@ -217,6 +259,22 @@ export default function MaterialRequestScreen({
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
+          {isOwner && hqName ? (
+            <Card style={styles.summaryCard}>
+              <Text style={styles.cardTitleInline}>본사에 올릴 자재 요청</Text>
+              <Text style={styles.summaryHint}>
+                작업자 요청은 현장 관리자에게만 와요. 승인한 작업자 요청을
+                합쳐서 {hqName}에 요청해요.
+              </Text>
+              <Button
+                title="승인한 작업자 요청 불러오기"
+                variant="outline"
+                onPress={loadWorkerRequests}
+                loading={loadingWorkers}
+                style={styles.summaryBtn}
+              />
+            </Card>
+          ) : null}
           <Card>
             <View style={styles.titleRow}>
               <Text style={styles.cardTitleInline}>필요한 자재</Text>
@@ -399,6 +457,14 @@ export default function MaterialRequestScreen({
 }
 
 const styles = StyleSheet.create({
+  summaryCard: { marginBottom: 12 },
+  summaryHint: {
+    fontSize: 13,
+    color: colors.textSub,
+    marginTop: 6,
+    lineHeight: 19,
+  },
+  summaryBtn: { marginTop: 12 },
   root: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },

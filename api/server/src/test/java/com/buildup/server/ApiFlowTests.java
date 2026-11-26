@@ -436,34 +436,33 @@ class ApiFlowTests {
         String siteId = firstSiteId(worker);
         clearInvocations(push);
 
-        // 작업자 보고 → 현장 총관리자 + 본사 관계자(보낸 사람은 빼고)
+        // 작업자 보고 → 현장 총관리자에게만(본사에는 가지 않는다)
         String reportId = submitReport(worker, siteId);
         verify(push, timeout(3000)).notifyUsers(
-                argThat(ids -> ids.contains(Long.valueOf(adminId)) && ids.contains(Long.valueOf(hqId))
-                        && !ids.contains(Long.valueOf(workerId))),
+                argThat(ids -> ids.size() == 1 && ids.contains(Long.valueOf(adminId))),
                 startsWith("새 현장 보고 · "), any(), argThat(d -> "report".equals(d.get("type"))
                         && siteId.equals(d.get("siteId"))));
 
-        // 본사 보완 요청 → 보고한 작업자
-        send("PATCH", "/api/reports/" + reportId + "/review", hq, Map.of("status", "revision", "comment", "다시"));
+        // 현장 관리자 보완 요청 → 보고한 작업자
+        send("PATCH", "/api/reports/" + reportId + "/review", admin, Map.of("status", "revision", "comment", "다시"));
         verify(push, timeout(3000)).notifyUsers(
                 argThat(ids -> ids.size() == 1 && ids.contains(Long.valueOf(workerId))),
                 startsWith("보완 요청 · "), any(), any());
 
-        // 작업자가 보완 → 보완을 요청한 본사 관계자
+        // 작업자가 보완 → 보완을 요청한 현장 관리자
         send("PATCH", "/api/reports/" + reportId, worker, Map.of("memo", "보완했습니다"));
         verify(push, timeout(3000)).notifyUsers(
-                argThat(ids -> ids.size() == 1 && ids.contains(Long.valueOf(hqId))),
+                argThat(ids -> ids.size() == 1 && ids.contains(Long.valueOf(adminId))),
                 startsWith("보완 완료 · "), any(), any());
 
-        // 자재 요청 → 총관리자·본사, 승인 → 요청한 작업자
+        // 자재 요청 → 현장 총관리자만, 승인 → 요청한 작업자
         Map<String, Object> site = send("GET", "/api/sites/" + siteId, worker, null).body();
         String processKey = ((Map<?, ?>) ((List<?>) site.get("processes")).get(0)).get("key").toString();
         Res mr = send("POST", "/api/sites/" + siteId + "/materials", worker, Map.of("processKey", processKey,
                 "items", List.of(Map.of("name", "시멘트", "quantity", 3, "unit", "포")), "urgent", true));
         assertThat(mr.status()).as(String.valueOf(mr.body())).isEqualTo(200);
         verify(push, timeout(3000)).notifyUsers(
-                argThat(ids -> ids.contains(Long.valueOf(adminId)) && !ids.contains(Long.valueOf(workerId))),
+                argThat(ids -> ids.size() == 1 && ids.contains(Long.valueOf(adminId))),
                 startsWith("긴급 자재 요청 · "), argThat(b -> b.contains("시멘트 3포")),
                 argThat(d -> "material".equals(d.get("type"))));
         send("PATCH", "/api/materials/" + mr.body().get("id") + "/status", admin, Map.of("status", "approved"));
@@ -471,6 +470,14 @@ class ApiFlowTests {
                 argThat(ids -> ids.size() == 1 && ids.contains(Long.valueOf(workerId))),
                 startsWith("자재 요청 승인 · "), any(), any());
 
+        // 현장 관리자가 정리해서 올린 보고 → 본사 관계자에게
+        String summaryId = submitReport(admin, siteId);
+        verify(push, timeout(3000)).notifyUsers(
+                argThat(ids -> ids.contains(Long.valueOf(hqId)) && !ids.contains(Long.valueOf(adminId))
+                        && !ids.contains(Long.valueOf(workerId))),
+                startsWith("새 현장 보고 · "), any(), any());
+
+        send("DELETE", "/api/reports/" + summaryId, admin, null);
         send("DELETE", "/api/reports/" + reportId, worker, null);
     }
 
@@ -512,11 +519,17 @@ class ApiFlowTests {
         // 작업자는 검토 불가, 보완 요청은 코멘트 필수
         assertThat(send("PATCH", "/api/reports/" + reportId + "/review", worker, Map.of("status", "approved")).status())
                 .isEqualTo(403);
-        assertThat(send("PATCH", "/api/reports/" + reportId + "/review", hq, Map.of("status", "revision")).status())
+        assertThat(send("PATCH", "/api/reports/" + reportId + "/review", admin, Map.of("status", "revision")).status())
                 .isEqualTo(400);
 
-        // 본사: 보완 요청
-        Res rev = send("PATCH", "/api/reports/" + reportId + "/review", hq,
+        // 본사는 작업자 보고를 검토할 수 없고, 목록에서도 보이지 않는다(현장 관리자가 정리해서 올린 것만 받는다)
+        assertThat(send("PATCH", "/api/reports/" + reportId + "/review", hq, Map.of("status", "approved")).status())
+                .isEqualTo(403);
+        assertThat(items(send("GET", "/api/sites/" + siteId + "/reports/page", hq, null)))
+                .noneMatch(i -> reportId.equals(String.valueOf(i.get("id"))));
+
+        // 현장 관리자: 보완 요청
+        Res rev = send("PATCH", "/api/reports/" + reportId + "/review", admin,
                 Map.of("status", "revision", "comment", "사진을 다시 찍어 주세요"));
         assertThat(rev.status()).isEqualTo(200);
         assertThat(review(rev.body()).get("status")).isEqualTo("revision");
@@ -529,7 +542,7 @@ class ApiFlowTests {
         Res ok = send("PATCH", "/api/reports/" + reportId + "/review", admin, Map.of("status", "approved"));
         assertThat(ok.status()).isEqualTo(200);
         assertThat(review(ok.body()).get("status")).isEqualTo("approved");
-        assertThat(send("PATCH", "/api/reports/" + reportId + "/review", hq, Map.of("status", "approved")).status())
+        assertThat(send("PATCH", "/api/reports/" + reportId + "/review", admin, Map.of("status", "approved")).status())
                 .isEqualTo(409);
 
         // 가장 최근 보고라 작성자가 지울 수 있다
@@ -545,7 +558,7 @@ class ApiFlowTests {
                 Map.of("latitude", 1, "longitude", 1)).status()).isEqualTo(403);
 
         String reportId = submitReport(worker, siteId, "37.5665", "126.9780");
-        Map<String, Object> rep = findById(items(send("GET", "/api/sites/" + siteId + "/reports/page", hq, null)), reportId);
+        Map<String, Object> rep = findById(items(send("GET", "/api/sites/" + siteId + "/reports/page", admin, null)), reportId);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> checks = (List<Map<String, Object>>) rep.get("checks");
         assertThat(checks).extracting(c -> c.get("type")).contains("far_submit");
@@ -629,9 +642,24 @@ class ApiFlowTests {
         String id = created.body().get("id").toString();
         assertThat(send("PATCH", "/api/materials/" + id + "/status", worker, Map.of("status", "approved")).status())
                 .isEqualTo(403);
-        Res ok = send("PATCH", "/api/materials/" + id + "/status", hq, Map.of("status", "approved"));
+        // 작업자 요청은 본사가 아니라 현장 관리자가 처리한다
+        assertThat(send("PATCH", "/api/materials/" + id + "/status", hq, Map.of("status", "approved")).status())
+                .isEqualTo(409);
+        Res ok = send("PATCH", "/api/materials/" + id + "/status", admin, Map.of("status", "approved"));
         assertThat(ok.status()).isEqualTo(200);
         assertThat(ok.body().get("status")).isEqualTo("approved");
+
+        // 본사 목록에는 작업자 요청이 없고, 현장 관리자가 정리해 올린 요청만 있다
+        assertThat(send("GET", "/api/sites/" + siteId + "/materials", hq, null).list())
+                .noneMatch(o -> id.equals(String.valueOf(((Map<?, ?>) o).get("id"))));
+        Res summary = send("POST", "/api/sites/" + siteId + "/materials", admin, Map.of(
+                "items", List.of(Map.of("name", "철근 D13", "quantity", 2, "unit", "톤")), "note", "작업자 요청 정리"));
+        assertThat(summary.status()).isEqualTo(200);
+        String summaryId = summary.body().get("id").toString();
+        assertThat(send("GET", "/api/sites/" + siteId + "/materials", hq, null).list())
+                .anyMatch(o -> summaryId.equals(String.valueOf(((Map<?, ?>) o).get("id"))));
+        assertThat(send("PATCH", "/api/materials/" + summaryId + "/status", hq, Map.of("status", "approved")).status())
+                .isEqualTo(200);
     }
 
     // ---------- 엑셀 ----------

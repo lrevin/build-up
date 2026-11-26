@@ -122,15 +122,16 @@ public class ReportService {
     }
 
     /**
-     * 검토(승인·보완 요청)할 수 있는 사람: 연결된 본사의 관리자 또는 현장 총관리자. 본인이 쓴 보고는 못 한다.
-     * (총관리자 본인 보고 → 본사 연결 현장이면 본사가 검토, 본사 없는 현장이면 제출할 때 바로 승인)
+     * 검토(승인·보완 요청)할 수 있는 사람 — 보고 체계: 작업자 → 현장 관리자 → 본사
+     * - 작업자 보고: 현장 총관리자만(본사에는 올라가지 않는다)
+     * - 현장 관리자(총관리자) 보고: 연결된 본사의 관리자(본사 없는 현장이면 제출할 때 바로 승인)
      */
     private static boolean canReview(Report r, User viewer) {
         if (!Report.PENDING.equals(r.status()) || r.getAuthor().getId().equals(viewer.getId())) {
             return false;
         }
         Site site = r.getSite();
-        return site.isOwner(viewer.getId()) || site.isHqManagerOf(viewer);
+        return site.isByOwner(r.getAuthor()) ? site.isHqManagerOf(viewer) : site.isOwner(viewer.getId());
     }
 
     private User viewer(Long userId) {
@@ -148,6 +149,9 @@ public class ReportService {
         sites.viewableSite(userId, siteId);
         User viewer = viewer(userId);
         List<Report> rows = reports.findBySiteIdOrderByCreatedAtDescIdDesc(siteId);
+        if (!rows.isEmpty() && rows.get(0).getSite().seesOwnerOnly(viewer)) {
+            rows = rows.stream().filter(r -> r.getSite().isByOwner(r.getAuthor())).toList();
+        }
         // 목록이 최신순이라 처음 것이 현장의 가장 최근 보고
         Long latest = rows.isEmpty() ? null : rows.get(0).getId();
         Overall ov = new Overall();
@@ -165,6 +169,7 @@ public class ReportService {
         User viewer = viewer(userId);
         Overall ov = new Overall();
         return reports.findTop100BySiteIdInOrderByCreatedAtDesc(siteIds).stream()
+                .filter(r -> r.getSite().isByOwner(r.getAuthor())) // 본사는 현장 관리자가 올린 보고만
                 .map(r -> ReportDto.of(r, ov.of(r), false, false, canReview(r, viewer)))
                 .toList();
     }
@@ -177,10 +182,10 @@ public class ReportService {
     /** 현장 보고 이력 한 묶음(최신순). 첫 묶음에는 전체 보고 수도 담는다 */
     @Transactional(readOnly = true)
     public ReportPageDto page(Long userId, Long siteId, String cursor, int size) {
-        sites.viewableSite(userId, siteId);
+        Site site = sites.viewableSite(userId, siteId);
         User viewer = viewer(userId);
         int n = pageSize(size);
-        List<Report> rows = fetchPage(List.of(siteId), null, cursor, n);
+        List<Report> rows = fetchPage(List.of(siteId), null, site.seesOwnerOnly(viewer), cursor, n);
         String next = nextCursor(rows, n);
         if (rows.size() > n) {
             rows = rows.subList(0, n);
@@ -204,7 +209,7 @@ public class ReportService {
             return new ReportPageDto(List.of(), null, null, null);
         }
         int n = pageSize(size);
-        List<Report> rows = fetchPage(siteIds, null, cursor, n);
+        List<Report> rows = fetchPage(siteIds, null, true, cursor, n); // 본사: 현장 관리자가 올린 보고만
         String next = nextCursor(rows, n);
         if (rows.size() > n) {
             rows = rows.subList(0, n);
@@ -247,7 +252,7 @@ public class ReportService {
     }
 
     /** 커서 모양: 보고시각(ISO) + "_" + 보고ID */
-    private List<Report> fetchPage(List<Long> siteIds, String key, String cursor, int n) {
+    private List<Report> fetchPage(List<Long> siteIds, String key, boolean ownerOnly, String cursor, int n) {
         Instant at = FAR_FUTURE;
         long id = Long.MAX_VALUE;
         if (cursor != null && !cursor.isBlank()) {
@@ -260,7 +265,7 @@ public class ReportService {
             }
         }
         // 하나 더 불러와서 다음 묶음이 있는지 안다
-        return reports.page(siteIds, key, at, id, Limit.of(n + 1));
+        return reports.page(siteIds, key, ownerOnly, at, id, Limit.of(n + 1));
     }
 
     private static String nextCursor(List<Report> rows, int n) {

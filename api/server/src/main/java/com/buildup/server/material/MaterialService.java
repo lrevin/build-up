@@ -42,9 +42,11 @@ public class MaterialService {
 
     @Transactional(readOnly = true)
     public List<MaterialRequestDto> list(Long userId, Long siteId) {
-        sites.viewableSite(userId, siteId);
+        Site site = sites.viewableSite(userId, siteId);
         User viewer = user(userId);
+        boolean ownerOnly = site.seesOwnerOnly(viewer); // 본사: 현장 관리자가 올린 요청만
         return materials.findBySiteIdOrderByCreatedAtDescIdDesc(siteId).stream()
+                .filter(m -> !ownerOnly || site.isByOwner(m.getAuthor()))
                 .map(m -> MaterialRequestDto.of(m, viewer))
                 .toList();
     }
@@ -57,6 +59,7 @@ public class MaterialService {
         }
         User viewer = user(userId);
         return materials.findBySiteIdInOrderByCreatedAtDescIdDesc(siteIds).stream()
+                .filter(m -> m.getSite().isByOwner(m.getAuthor())) // 본사: 현장 관리자가 올린 요청만
                 .map(m -> MaterialRequestDto.of(m, viewer))
                 .toList();
     }
@@ -156,7 +159,9 @@ public class MaterialService {
         }
         if (!Permissions.of(m, viewer).canDecide()) {
             throw ApiException.conflict(MaterialRequest.REQUESTED.equals(m.getStatus())
-                    ? "본인이 요청한 자재는 본사에서 승인해요."
+                    ? (site.isByOwner(m.getAuthor())
+                            ? "현장 관리자의 요청은 본사에서 처리해요."
+                            : "작업자의 요청은 현장 관리자가 처리해요.")
                     : "이미 처리된 요청이에요. 목록을 새로고침해 주세요.");
         }
         String r = reason == null ? "" : reason.trim();
