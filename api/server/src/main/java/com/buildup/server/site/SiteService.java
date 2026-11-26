@@ -214,15 +214,16 @@ public class SiteService {
                 s.getWorkType(),
                 Times.iso(s.getLastReportedAt()),
                 s.getCompany() == null ? null : s.getCompany().getName(),
-                (int) materials.countBySiteIdAndStatus(s.getId(), MaterialRequest.REQUESTED),
+                // 대기 자재: 본사는 현장 관리자가 올린 것, 현장에서는 작업자가 올린 것(현장 관리자가 처리)
+                (int) materials.countPending(s.getId(), MaterialRequest.REQUESTED, forHq),
                 pendingReviews(s, userId, forHq),
                 mode(s));
     }
 
-    /** 내가 검토(승인·보완 요청)할 수 있는 대기 보고 수: 본사는 전부, 현장 총관리자는 남이 쓴 보고 */
+    /** 내가 검토(승인·보완 요청)할 수 있는 대기 보고 수: 본사는 현장 관리자가 올린 보고, 현장 총관리자는 작업자 보고 */
     private int pendingReviews(Site s, Long userId, boolean forHq) {
         if (forHq) {
-            return (int) reports.countBySiteIdAndReviewStatus(s.getId(), Report.PENDING);
+            return (int) reports.countByOwnerAndStatus(s.getId(), Report.PENDING);
         }
         if (s.isOwner(userId)) {
             return (int) reports.countBySiteIdAndReviewStatusAndAuthorIdNot(s.getId(), Report.PENDING, userId);

@@ -28,7 +28,7 @@ public class Notices {
 
     public void reportCreated(Report r) {
         Site site = r.getSite();
-        Set<Long> to = managers(site);
+        Set<Long> to = upward(site, r.getAuthor());
         to.remove(r.getAuthor().getId());
         String body = r.getAuthor().getName() + " · " + r.workText() + " · 진행률 "
                 + pct(r.getFromProgress()) + " → " + pct(r.getToProgress());
@@ -54,7 +54,7 @@ public class Notices {
         if (r.lastReview() != null) {
             to.add(r.lastReview().getReviewer().getId());
         } else {
-            to.addAll(managers(r.getSite()));
+            to.addAll(upward(r.getSite(), r.getAuthor()));
         }
         to.remove(r.getAuthor().getId());
         push.notifyUsers(to, "보완 완료 · " + r.getSite().getName(),
@@ -66,7 +66,7 @@ public class Notices {
             return; // 바로 승인된 요청(본사 없는 현장의 총관리자 본인 요청)은 알릴 사람이 없다
         }
         Site site = m.getSite();
-        Set<Long> to = managers(site);
+        Set<Long> to = upward(site, m.getAuthor());
         to.remove(m.getAuthor().getId());
         String title = (m.isUrgent() ? "긴급 자재 요청 · " : "자재 요청 · ") + site.getName();
         push.notifyUsers(to, title, m.getAuthor().getName() + " · " + items(m.getItems()), data("material", site));
@@ -88,11 +88,12 @@ public class Notices {
                 data("material", m.getSite()));
     }
 
-    /** 현장 총관리자 + 이 현장이 연결된 본사의 관계자 */
-    private Set<Long> managers(Site site) {
+    /** 보고 체계에서 한 단계 위: 작업자가 올리면 현장 총관리자, 현장 총관리자가 올리면 연결된 본사 관계자 */
+    private Set<Long> upward(Site site, User author) {
         Set<Long> ids = new LinkedHashSet<>();
-        ids.add(site.getOwner().getId());
-        if (site.getCompany() != null) {
+        if (!site.isByOwner(author)) {
+            ids.add(site.getOwner().getId());
+        } else if (site.getCompany() != null) {
             users.findByHqCompanyIdOrderById(site.getCompany().getId()).forEach(u -> ids.add(u.getId()));
         }
         return ids;

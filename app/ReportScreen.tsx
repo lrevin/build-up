@@ -42,7 +42,12 @@ import {
   Users,
   X,
 } from 'lucide-react-native';
-import { fetchMaterials, fetchSite, submitReport } from '../api/buildup';
+import {
+  fetchMaterials,
+  fetchReportPage,
+  fetchSite,
+  submitReport,
+} from '../api/buildup';
 import { currentPlace } from '../location';
 import { errorMessage } from '../api/client';
 import { useAuth, useUser } from '../auth';
@@ -65,7 +70,9 @@ import MaterialRowsEditor, {
   MaterialRow,
   emptyMaterialRow,
   itemsFromRows,
+  rowsFromItems,
 } from '../components/MaterialRowsEditor';
+import { summarizeReports, workerReportsSinceMine } from '../utils/summary';
 import { formatQty } from '../components/Material';
 import { ScreenProps } from '../navigation';
 import { colors, radius } from '../theme';
@@ -162,6 +169,7 @@ export default function ReportScreen({
   const [photos, setPhotos] = useState<PhotoPick[]>([]);
   // 오늘 사용한 자재(승인되면 현장 재고에서 빠진다), 현장 관리자의 오늘 작업 평점
   const [usedRows, setUsedRows] = useState<MaterialRow[]>([emptyMaterialRow()]);
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
   const [rating, setRating] = useState<number | null>(null);
   const [viewing, setViewing] = useState<number | null>(null);
   const [materials, setMaterials] = useState<MaterialRequest[]>([]);
@@ -600,6 +608,30 @@ export default function ReportScreen({
   const { items: usedItems, bad: usedBad } = itemsFromRows(usedRows);
   // 현장 관리자만 평점을 매긴다
   const isSiteOwner = site.ownerId === user.id;
+
+  // 작업자 보고 정리: 진행한 작업(짧게) · 메모(작업자별) · 사용 자재(합계)를 채운다
+  const loadWorkerReports = async () => {
+    setLoadingWorkers(true);
+    try {
+      const page = await fetchReportPage(site.id, { size: 50 });
+      const list = workerReportsSinceMine(page.items, user.id);
+      if (!list.length) {
+        dialog.toast('새로 들어온 작업자 보고가 없어요');
+        return;
+      }
+      const s = summarizeReports(list);
+      setWorks(s.works);
+      setMemo(s.memo);
+      if (s.materials.length) {
+        setUsedRows(rowsFromItems(s.materials));
+      }
+      dialog.toast(`작업자 보고 ${list.length}건을 불러왔어요`, 'success');
+    } catch (e) {
+      dialog.toast(errorMessage(e), 'error');
+    } finally {
+      setLoadingWorkers(false);
+    }
+  };
   const setRatingClamped = (v: number) =>
     setRating(round1(Math.min(RATING_MAX, Math.max(RATING_MIN, v))));
   // 별을 누르면 1점 단위, 같은 점수의 별을 한 번 더 누르면 0.5점 빼기
@@ -854,6 +886,25 @@ export default function ReportScreen({
                   );
                 })}
               </View>
+            </Card>
+          ) : null}
+
+          {/* 현장 관리자(본사 연결): 작업자 보고를 정리해서 본사에 올린다 */}
+          {isSiteOwner && site.hqName ? (
+            <Card style={styles.gap}>
+              <Text style={styles.cardTitleInline}>본사에 올릴 보고</Text>
+              <Text style={styles.hint}>
+                작업자 보고는 현장 관리자에게만 와요. 내가 마지막으로 본사에
+                보고한 뒤 들어온 작업자 보고를 불러와 정리해서 {site.hqName}에
+                올려요.
+              </Text>
+              <Button
+                title="작업자 보고 불러오기"
+                variant="outline"
+                onPress={loadWorkerReports}
+                loading={loadingWorkers}
+                style={styles.gap}
+              />
             </Card>
           ) : null}
 

@@ -165,6 +165,19 @@ public class Site {
         return owner.getId().equals(userId);
     }
 
+    /**
+     * 보고 체계: 작업자 → 현장 관리자(총관리자) → 본사.
+     * 작업자가 올린 보고·자재 요청은 현장 관리자만 받고, 현장 관리자가 정리해서 올린 것만 본사가 받는다.
+     */
+    public boolean isByOwner(User author) {
+        return author != null && isOwner(author.getId());
+    }
+
+    /** 이 현장에 참여하지 않은 본사 관계자(본사 화면으로만 보는 사람): 현장 관리자가 올린 것만 본다 */
+    public boolean seesOwnerOnly(User viewer) {
+        return viewer != null && isHqOf(viewer) && !isOwner(viewer.getId()) && !hasMember(viewer.getId());
+    }
+
     /** 이 현장이 연결된 본사의 관리자인가(보고 검토·자재 승인 권한) */
     public boolean isHqManagerOf(User user) {
         return isHqOf(user) && user.isHqManager();

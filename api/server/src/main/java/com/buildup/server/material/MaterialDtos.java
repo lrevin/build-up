@@ -38,9 +38,11 @@ public final class MaterialDtos {
             boolean linked = site.getCompany() != null;
             boolean author = m.getAuthor().getId().equals(viewer.getId());
             boolean requested = MaterialRequest.REQUESTED.equals(m.getStatus());
+            // 보고 체계: 작업자 요청 → 현장 관리자가 처리, 현장 관리자 요청 → 본사가 처리
+            boolean byOwner = site.isByOwner(m.getAuthor());
             return new Permissions(
                     author && requested,
-                    requested && (hq || (owner && !(author && linked))));
+                    requested && !author && (byOwner ? (hq && linked) : owner));
         }
     }
 
